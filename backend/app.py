@@ -712,7 +712,7 @@ class Handler(BaseHTTPRequestHandler):
         kind = self.safe_name(parts[1])
         name = self.safe_name(parts[2])
 
-        if kind not in ("items", "heroes", "abilities") or not name:
+        if kind not in ("items", "heroes", "abilities", "crops") or not name:
             self.send_response(404)
             self.end_headers()
 

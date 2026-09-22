@@ -18,6 +18,10 @@ CDN = "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react"
 ICONS_DIR = DATA_DIR / "icons"
 ITEMS_DIR = ICONS_DIR / "items"
 HEROES_DIR = ICONS_DIR / "heroes"
+
+# Крупные портреты 400x250 — те же, что Valve показывает на сайте игры.
+# Нужны шапке главного окна: мелкая иконка в баннере выглядит мылом.
+CROPS_DIR = ICONS_DIR / "crops"
 ABILITIES_DIR = ICONS_DIR / "abilities"
 
 
@@ -44,6 +48,7 @@ def download_all(workers=12):
 
     ITEMS_DIR.mkdir(parents=True, exist_ok=True)
     HEROES_DIR.mkdir(parents=True, exist_ok=True)
+    CROPS_DIR.mkdir(parents=True, exist_ok=True)
     ABILITIES_DIR.mkdir(parents=True, exist_ok=True)
 
     connection = get_connection()
@@ -80,6 +85,9 @@ def download_all(workers=12):
         (f"{CDN}/items/{name}.png", ITEMS_DIR / f"{name}.png") for name in items
     ] + [
         (f"{CDN}/heroes/{name}.png", HEROES_DIR / f"{name}.png")
+        for name in heroes
+    ] + [
+        (f"{CDN}/heroes/crops/{name}.png", CROPS_DIR / f"{name}.png")
         for name in heroes
     ] + [
         (f"{CDN}/abilities/{name}.png", ABILITIES_DIR / f"{name}.png")

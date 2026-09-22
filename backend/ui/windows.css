@@ -311,85 +311,112 @@ body.menu { background: #0b0e13; }
 /* шапка с портретом                                                    */
 /* ------------------------------------------------------------------ */
 
-/* Портрет живёт фоном и уходит в размытие: иконка героя маленькая, во
-   весь баннер она была бы мыльной, а размытая читается как свет от
-   игры — именно то, что нужно за текстом. */
+/* Две колонки: слева текст, справа картинка. Раньше портрет лежал
+   размытым фоном на всю ширину — так он не читался ни как картинка,
+   ни как фон, а текст всё равно ложился на случайные пятна. */
 .hero-banner {
     position: relative;
     margin: 0 -22px;
-    padding: 34px 22px 28px;
+    min-height: 208px;
+    display: flex;
+    align-items: center;
     overflow: hidden;
     border-bottom: 1px solid var(--line-soft);
 }
 
 .hero-art {
     position: absolute;
-    inset: -40px -10px auto -10px;
-    height: 230px;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 58%;
     background-size: cover;
-    background-position: center 22%;
-    filter: blur(26px) saturate(1.45);
-    opacity: 0.72;
-    transform: scale(1.2);
+    background-position: center 30%;
 }
 
-/* Тень поверх портрета: без неё текст ложится на случайные пятна. */
-.hero-banner::after {
+/* Картинка растворяется влево, под текст: резкий край выглядел бы
+   вклейкой, а не частью окна. */
+.hero-art::after {
     content: "";
     position: absolute;
     inset: 0;
     background: linear-gradient(
-        180deg,
-        rgba(11, 14, 19, 0.28) 0%,
-        rgba(11, 14, 19, 0.72) 58%,
-        #0b0e13 100%
+        90deg,
+        #0b0e13 0%,
+        rgba(11, 14, 19, 0.92) 22%,
+        rgba(11, 14, 19, 0.45) 62%,
+        rgba(11, 14, 19, 0.22) 100%
     );
 }
 
-.hero-text { position: relative; z-index: 1; }
+.hero-text {
+    position: relative;
+    z-index: 1;
+    padding: 26px 22px 24px;
+    max-width: 60%;
+}
 
 .hero-text h1 {
     margin: 0;
-    font-size: 27px;
+    font-size: 23px;
     font-weight: 700;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.4px;
 }
 
 .hero-text p {
-    margin: 5px 0 17px;
+    margin: 7px 0 18px;
+    max-width: 340px;
     font-size: 12.5px;
+    line-height: 1.5;
     color: var(--muted);
-    font-variant-numeric: tabular-nums;
 }
 
 .big-btn {
     display: inline-flex;
     align-items: center;
-    gap: 9px;
-    padding: 11px 22px;
+    gap: 10px;
+    padding: 10px 20px 10px 12px;
     border: 0;
-    border-radius: 8px;
+    border-radius: 9px;
     background: var(--accent);
     color: #08111e;
     font-family: inherit;
     font-size: 14px;
     font-weight: 650;
     cursor: pointer;
+    box-shadow: 0 6px 18px -8px rgba(76, 157, 255, 0.9);
     transition: background-color 0.13s ease, transform 0.13s ease;
 }
 
-.big-btn svg { width: 15px; height: 15px; }
+/* Значок в кружке: так кнопка читается как «действие», а не как ссылка. */
+.big-btn-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(8, 17, 30, 0.22);
+}
+
+.big-btn-mark svg { width: 13px; height: 13px; }
 
 .big-btn:hover { background: var(--accent-lit); }
 .big-btn:active { transform: translateY(1px); }
 .big-btn:focus-visible { outline: 2px solid var(--accent-lit); outline-offset: 2px; }
 
 .big-btn-note {
-    position: relative;
-    z-index: 1;
-    margin-top: 7px;
+    margin-top: 8px;
     font-size: 11px;
     color: var(--faint);
+}
+
+.hero-facts {
+    margin-top: 14px;
+    white-space: nowrap;
+    font-size: 11px;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
 }
 
 /* ------------------------------------------------------------------ */

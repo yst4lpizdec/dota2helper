@@ -16,18 +16,26 @@
          стоит ровно одну строку кода, а окно сразу перестаёт выглядеть
          технической утилитой. -->
     <header class="hero-banner">
+        <!-- Портрет героя справа — тот же, что Valve показывает на сайте
+             игры: 400x250. Мелкая иконка в баннере выглядела мылом, а
+             размытое пятно не читалось как картинка вовсе. -->
         <div class="hero-art" id="hero-art"></div>
 
         <div class="hero-text">
-            <h1>Dota2Helper</h1>
-            <p id="sub">загружаю…</p>
+            <h1>Добро пожаловать в Dota2Helper</h1>
+            <p>Подсказка по сборке прямо в игре: что брать следующим,
+               к какой минуте и что меняет вражеский пик.</p>
 
             <button class="big-btn" id="play" type="button">
-                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5 13 8l-9 5.5z" fill="currentColor"/></svg>
+                <span class="big-btn-mark">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.4 12.4 8 5 12.6z" fill="currentColor"/></svg>
+                </span>
                 Запустить Dota 2
             </button>
 
-            <div class="big-btn-note">через Steam</div>
+            <div class="big-btn-note">Запуск через Steam</div>
+
+            <div class="hero-facts" id="sub">загружаю…</div>
         </div>
     </header>
 
@@ -487,10 +495,47 @@
 
             if (!list.length) { return; }
 
-            var pick = list[Math.floor(Math.random() * list.length)];
+            /* Герои для шапки выбраны руками: у части портретов в кадре
+               не герой, а облако эффектов — в баннере это выглядит
+               мутным пятном, а не картинкой из игры. */
+            var FACES = [
+                "skeleton_king", "juggernaut", "invoker", "phantom_assassin",
+                "pudge", "antimage", "lina", "axe", "queenofpain",
+                "nevermore", "dragon_knight", "mars", "legion_commander",
+                "templar_assassin", "drow_ranger", "crystal_maiden"
+            ];
 
-            document.getElementById("hero-art").style.backgroundImage =
-                "url(/icons/heroes/" + pick.hero + ".png)";
+            var known = {};
+            list.forEach(function (hero) { known[hero.hero] = true; });
+
+            var faces = FACES.filter(function (name) { return known[name]; });
+
+            if (!faces.length) {
+                faces = list.map(function (hero) { return hero.hero; });
+            }
+
+            /* Картинка есть не у каждого героя — пробуем несколько, а не
+               оставляем пустой баннер из-за одного промаха. */
+            var left = 4;
+
+            function attempt() {
+                if (left-- <= 0) { return; }
+
+                var pick = faces[Math.floor(Math.random() * faces.length)];
+                var url = "/icons/crops/" + pick + ".png";
+
+                var probe = new Image();
+
+                probe.onload = function () {
+                    document.getElementById("hero-art").style.backgroundImage =
+                        "url(" + url + ")";
+                };
+
+                probe.onerror = attempt;
+                probe.src = url;
+            }
+
+            attempt();
         })
         .catch(function () {});
 
@@ -586,8 +631,7 @@
             .then(function (answer) { return answer.json(); })
             .then(function (data) {
                 document.getElementById("sub").textContent =
-                    count(data.matches) + " матчей · "
-                    + data.heroes.length + " героев · данные от "
+                    count(data.matches) + " матчей · данные от "
                     + when(data.built_at);
             })
             .catch(function () {
