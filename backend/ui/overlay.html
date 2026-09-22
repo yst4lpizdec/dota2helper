@@ -36,16 +36,29 @@
             <button class="ctl" id="fold" type="button"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             <button class="ctl danger" id="quit" type="button"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.2 4.2 11.8 11.8M11.8 4.2 4.2 11.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
         </div>
+
+        <!-- Позиции — отдельной строкой во всю ширину, чипами со словами,
+             как в справочнике: цифры рядом с именем были мелкими и
+             ничего не говорили без подсказки. -->
+        <div class="role-row" id="role-row"></div>
     </div>
 
     <div class="waiting" id="waiting">ожидаю игру</div>
 
     <div id="body" hidden>
-        <div class="enemies" id="enemies" data-block="enemies"></div>
+        <!-- Подпись нужна: пятёрка портретов без неё читалась как
+             случайная полоска картинок, а не как «вот твои враги». -->
+        <div class="enemy-block" id="enemy-block" data-block="enemies">
+            <div class="block-label">
+                <span>Против кого стоишь</span>
+                <span class="block-hint">нажми на героя — отметишь соперника по линии</span>
+            </div>
+            <div class="enemies" id="enemies"></div>
+        </div>
 
         <div class="now" data-block="now">
             <div class="now-head">
-                <div class="now-title">брать сейчас</div>
+                <div class="now-title">Брать сейчас</div>
                 <div class="now-phase" id="now-phase"></div>
             </div>
             <div class="now-items" id="now-items"></div>
@@ -53,10 +66,13 @@
 
         <div class="rows" id="rows"></div>
 
+        <!-- Скиллы и таланты — отдельно от предметов: в широкой панели
+             они встают в левую колонку, под «брать сейчас», и она не
+             пустует. В узкой идут сразу после остальных, как и раньше. -->
+        <div class="rows side-rows" id="side-rows"></div>
+
         <div class="footer" data-block="footer">
             <span><span class="swatch"></span>сильнее против этого пика</span>
-            <span>клик по врагу — он против тебя на линии</span>
-            <span class="credit">данные — STRATZ · by yst4l</span>
         </div>
     </div>
 
@@ -64,13 +80,13 @@
 
     <aside class="sheet" id="sheet" hidden>
         <div class="sheet-head">
-            <div class="sheet-title">настройки</div>
-            <button class="btn primary" id="done" type="button">готово</button>
+            <div class="sheet-title">Настройки</div>
+            <button class="btn primary" id="done" type="button">Готово</button>
         </div>
 
         <div class="field">
             <div class="field-head">
-                <label class="field-name" for="opacity">прозрачность</label>
+                <label class="field-name" for="opacity">Прозрачность</label>
                 <span class="field-value" id="opacity-value">100%</span>
             </div>
             <input type="range" id="opacity" min="30" max="100" value="100">
@@ -78,29 +94,39 @@
 
         <div class="field">
             <div class="field-head">
-                <label class="field-name" for="scale">размер</label>
+                <label class="field-name" for="scale">Размер</label>
                 <span class="field-value" id="scale-value">100%</span>
             </div>
             <input type="range" id="scale" min="70" max="180" value="100">
         </div>
 
         <div class="field">
+            <div class="field-head">
+                <span class="field-name">Вид панели</span>
+            </div>
+            <div class="segmented" id="layout-choice">
+                <button type="button" data-value="tall">узкая</button>
+                <button type="button" data-value="wide">широкая</button>
+            </div>
+        </div>
+
+        <div class="field">
             <label class="switch">
                 <input type="checkbox" id="hide-without-dota">
-                <span>показывать панель только в матче</span>
+                <span>Показывать панель только в матче</span>
             </label>
         </div>
 
         <div class="field">
             <div class="field-head">
-                <span class="field-name">что показывать</span>
+                <span class="field-name">Что показывать</span>
             </div>
             <div class="blocks" id="blocks"></div>
         </div>
 
         <div class="sheet-foot">
-            <button class="btn" id="recenter" type="button">вернуть на экран</button>
-            <button class="btn" id="quit2" type="button">убрать панель</button>
+            <button class="btn" id="recenter" type="button">Вернуть на экран</button>
+            <button class="btn" id="quit2" type="button">Убрать панель</button>
         </div>
     </aside>
 
@@ -320,13 +346,53 @@
        сворачивать пришлось бы заново после каждого запуска. */
     var folded = {};
 
+    /* Заголовки словами, как в приложении. Ключ сворачивания остаётся
+       прежним коротким словом: по нему свёрнутые разделы записаны в
+       настройках, и новое название развернуло бы их все. */
+    var TITLES = {
+        "старт": "Стартовая закупка",
+        "ранняя": "Ранняя игра",
+        "кор": "Основной закуп",
+        "поздняя": "Поздняя игра",
+        "реже": "Реже",
+        "расход": "Расходники и варды",
+        "против": "Против этого пика",
+        "прокачка": "Скиллы",
+        "таланты": "Таланты"
+    };
+
+    /* К началу каждого матча панель сворачивается: раскрыты только
+       стартовая закупка и скиллы — они нужны у фонтана. Развёрнутая
+       целиком, она закрывала полэкрана. Что раскроют посреди матча,
+       остаётся раскрытым до его конца. */
+    var OPEN_AT_START = { "старт": true, "прокачка": true };
+
+    var lastMatch = null;
+    var foldsReset = false;
+
+    function foldForNewMatch(matchId) {
+        if (!matchId || matchId === lastMatch) { return; }
+
+        lastMatch = matchId;
+        foldsReset = true;
+
+        Object.keys(TITLES).forEach(function (name) {
+            folded[name] = !OPEN_AT_START[name];
+        });
+
+        tell("setFolded", JSON.stringify(
+            Object.keys(folded).filter(function (name) { return folded[name]; })
+        ));
+    }
+
     function addRow(host, key, label, meta, build) {
         var card = el("section", "card" + (folded[label] ? " folded" : ""));
         card.dataset.block = key;
+        card.dataset.fold = label;
 
         var head = el("button", "card-head");
         head.type = "button";
-        head.appendChild(el("span", "card-title", label));
+        head.appendChild(el("span", "card-title", TITLES[label] || label));
 
         if (meta) { head.appendChild(el("span", "card-meta", meta)); }
 
@@ -401,9 +467,12 @@
             var role = ROLES[entry.position] || [digit, ""];
             var on = entry.position === state.position;
 
-            var cell = el("button", "role" + (on ? " on" : ""), digit);
+            var cell = el("button", "role" + (on ? " on" : ""));
             cell.type = "button";
             cell.dataset.position = entry.position;
+            cell.appendChild(el("b", null, digit));
+            cell.appendChild(document.createTextNode(
+                role[0].charAt(0).toUpperCase() + role[0].slice(1)));
 
             bindTip(cell, "поз. " + digit + " &middot; " + role[0] +
                 ", " + role[1] + " &middot; " + entry.matches + " игр" +
@@ -411,18 +480,6 @@
 
             box.appendChild(cell);
         });
-
-        // Название выбранной позиции словами: цифра сама по себе ничего
-        // не говорит о том, на какой линии стоять.
-        var chosen = ROLES[state.position];
-
-        if (chosen) {
-            box.appendChild(el("span", "role-name", chosen[0]));
-        }
-
-        if (!state.position_manual) {
-            box.appendChild(el("span", "role-auto", "авто"));
-        }
 
         return box;
     }
@@ -461,6 +518,7 @@
             masthead.classList.add("idle");
             document.getElementById("hero-name").textContent = "dota2helper";
             document.getElementById("hero-facts").innerHTML = "";
+            document.getElementById("role-row").innerHTML = "";
             waiting.textContent = (state && state.error) || "ожидаю игру";
 
             /* Шапку не трогаем: крестик и настройки нужны и без матча. */
@@ -478,23 +536,34 @@
 
         var match = state.match || {};
         var owned = {};
+
+        foldForNewMatch(match.match_id);
         (state.owned || []).forEach(function (name) { owned[name] = true; });
 
         document.getElementById("portrait").src = icon("heroes", state.hero);
         document.getElementById("hero-name").textContent =
             state.hero_display || heroTitle(state.hero);
 
+        var roleRow = document.getElementById("role-row");
+        roleRow.innerHTML = "";
+        roleRow.appendChild(el("div", "block-label", "Твоя роль"));
+        roleRow.appendChild(positions(state));
+
         var facts = document.getElementById("hero-facts");
         facts.innerHTML = "";
-        facts.appendChild(positions(state));
 
         /* Винрейт и число игр — одним куском: строка узкая, и при
            переносе «54.2% побед» не должно расставаться с «3104 игр»,
            а разделительная точка — оставаться сиротой в конце строки. */
+        // Позицию угадали по составу — говорим об этом словами в той же
+        // строке: раньше это была плашка «авто» у цифр, её не замечали.
+        var guessed = (state.positions || []).length && !state.position_manual;
+
         var wr = el("span", "tally");
         wr.innerHTML =
             "<b>" + state.winrate + "%</b> побед"
-            + ' <span class="dot">·</span> ' + state.matches + " игр";
+            + ' <span class="dot">·</span> ' + state.matches + " игр"
+            + (guessed ? ' <span class="dot">·</span> <span class="auto-note">по пику</span>' : "");
         facts.appendChild(wr);
 
         /* враги */
@@ -606,6 +675,9 @@
         var rows = document.getElementById("rows");
         rows.innerHTML = "";
 
+        var sideRows = document.getElementById("side-rows");
+        sideRows.innerHTML = "";
+
         if ((purchase.items || []).length) {
             addRow(rows, "starting", "старт",
                 purchase.total + " / " + purchase.budget + " зол.",
@@ -652,7 +724,7 @@
         }
 
         if ((state.consumables || []).length) {
-            addRow(rows, "consumables", "расход", "и варды",
+            addRow(rows, "consumables", "расход", null,
                 function () { return strip((state.consumables || []).slice(0, 7), null); });
         }
 
@@ -661,7 +733,7 @@
                предмет без ответа на «зачем» и «против кого» — просто
                картинка, по которой нечего решать: игрок и так видит, что
                она не из основной сборки. */
-            addRow(rows, "situational", "против", "этого пика", function () {
+            addRow(rows, "situational", "против", null, function () {
                 var box = el("div", "why");
 
                 (state.situational || []).slice(0, 6).forEach(function (entry) {
@@ -711,7 +783,7 @@
         }
 
         if ((state.skills || []).length) {
-            addRow(rows, "skills", "прокачка", null, function () {
+            addRow(sideRows, "skills", "прокачка", null, function () {
                 var box = el("div", "skills");
                 (state.skills || []).slice(0, 8).forEach(function (entry, index) {
                     var cell = el("button", "skill" + (entry.mark === "ульт" ? " ult" : ""));
@@ -730,7 +802,7 @@
         }
 
         if ((state.talents || []).length) {
-            addRow(rows, "talents", "таланты", null, function () {
+            addRow(sideRows, "talents", "таланты", null, function () {
                 var box = el("div", "talents");
                 (state.talents || []).forEach(function (entry) {
                     var line = el("div", "talent" + (entry.stale ? " stale" : ""));
@@ -920,7 +992,7 @@
         ["consumables", "расходники"],
         ["unusual", "ситуативно"],
         ["situational", "против пика"],
-        ["skills", "прокачка"],
+        ["skills", "скиллы"],
         ["talents", "таланты"],
         ["footer", "подписи внизу"]
     ];
@@ -935,11 +1007,11 @@
     function applyFolded() {
         var cards = document.querySelectorAll(".card");
 
+        // По ключу карточки, а не по тексту заголовка: заголовок теперь
+        // «Стартовая закупка», а записано в настройках «старт».
         Array.prototype.forEach.call(cards, function (card) {
-            var head = card.querySelector(".card-title");
-
-            if (head) {
-                card.classList.toggle("folded", !!folded[head.textContent]);
+            if (card.dataset.fold) {
+                card.classList.toggle("folded", !!folded[card.dataset.fold]);
             }
         });
 
@@ -988,7 +1060,10 @@
         });
     }
 
-    function slider(id, onChange) {
+    /* live — слать каждое движение. Размер так слать нельзя: каждое
+       изменение — это новый масштаб и новый размер прозрачного окна, и
+       панель тряслась, пока тянут. Его применяем, когда отпустили. */
+    function slider(id, onChange, live) {
         var input = document.getElementById(id);
         var value = document.getElementById(id + "-value");
 
@@ -1000,8 +1075,15 @@
 
         input.addEventListener("input", function () {
             paintTrack();
-            onChange(Number(input.value));
+
+            if (live !== false) { onChange(Number(input.value)); }
         });
+
+        if (live === false) {
+            input.addEventListener("change", function () {
+                onChange(Number(input.value));
+            });
+        }
 
         paintTrack();
 
@@ -1014,7 +1096,7 @@
 
     var scaleInput = slider("scale", function (percent) {
         tell("setScale", percent);
-    });
+    }, false);
 
     function showSheet(open) {
         sheetOpen = !!open;
@@ -1069,7 +1151,9 @@
             try { saved = JSON.parse(raw); } catch (error) { return; }
 
             (saved.hidden || []).forEach(function (key) { hidden[key] = true; });
-            (saved.folded || []).forEach(function (key) { folded[key] = true; });
+            if (!foldsReset) {
+                (saved.folded || []).forEach(function (key) { folded[key] = true; });
+            }
 
             hideBox.checked = saved.hide_without_dota !== false;
 
@@ -1098,9 +1182,11 @@
         compact = !!value;
 
         document.getElementById("rows").hidden = compact;
-        document.getElementById("enemies").hidden = compact;
+        document.getElementById("side-rows").hidden = compact;
+        document.getElementById("enemy-block").hidden = compact;
         document.querySelector(".footer").hidden = compact;
         document.getElementById("hero-facts").hidden = compact;
+        document.getElementById("role-row").hidden = compact;
         // Раньше здесь подменялся текст кнопки; теперь там значок,
         // и его направление задаёт класс на body.
         document.body.classList.toggle("compact", compact);
@@ -1108,8 +1194,8 @@
         reportHeight();
     }
 
-    /* Клик по цифре — играю на этой позиции, пересчитай под неё. */
-    document.getElementById("hero-facts").addEventListener("click", function (event) {
+    /* Клик по позиции — играю на ней, пересчитай под неё. */
+    document.getElementById("role-row").addEventListener("click", function (event) {
         var cell = event.target.closest(".role");
 
         if (!cell || cell.classList.contains("on")) { return; }
@@ -1233,6 +1319,54 @@
         lastSize = "";
         reportHeight();
     };
+
+    /* Сколько панели можно в высоту: приложение знает экран, страница —
+       нет. Длиннее — содержимое под шапкой прокручивается колесом, а не
+       уезжает за нижний край экрана. */
+    var maxHeight = 0;
+
+    window.__setMaxHeight = function (pixels) {
+        pixels = Math.round(pixels);
+
+        if (!pixels || pixels === maxHeight) { return; }
+
+        maxHeight = pixels;
+        panel.style.setProperty("--panel-max", pixels + "px");
+    };
+
+    /* Вид панели: узкая колонка или широкая, в две колонки. */
+    var layoutChoice = document.getElementById("layout-choice");
+
+    function markLayout(layout) {
+        Array.prototype.forEach.call(layoutChoice.children, function (button) {
+            button.classList.toggle("on", button.dataset.value === layout);
+        });
+    }
+
+    window.__setLayout = function (layout) {
+        layout = layout === "wide" ? "wide" : "tall";
+
+        document.body.classList.toggle("wide", layout === "wide");
+        markLayout(layout);
+
+        lastSize = "";
+        reportHeight();
+    };
+
+    markLayout("tall");
+
+    layoutChoice.addEventListener("click", function (event) {
+        var button = event.target.closest("button");
+
+        if (!button) { return; }
+
+        // Меняем сразу здесь, а приложение запомнит выбор и скажет то же
+        // самое окну настроек.
+        window.__setLayout(button.dataset.value);
+        tell("setOption", JSON.stringify({
+            key: "panel_layout", value: button.dataset.value
+        }));
+    });
 }());
 </script>
 <!-- END ARTIFACT -->

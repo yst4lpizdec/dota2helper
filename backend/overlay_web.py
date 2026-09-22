@@ -700,6 +700,8 @@ class Overlay(QWidget):
             self.run("window.__setCompact(true)")
 
         self.send_hotkeys()
+        self.send_layout()
+        self.send_max_height()
 
     def send_hotkeys(self):
         """Подписи на панели называют сочетания — пусть называют верные."""
@@ -743,6 +745,9 @@ class Overlay(QWidget):
 
         settings_store.update(**{key: value})
 
+        if key == "panel_layout":
+            self.send_layout()
+
         if key == "panel_screen":
             # Выбрали монитор — показываем панель прямо там, чтобы было
             # видно, куда она уехала.
@@ -781,10 +786,45 @@ class Overlay(QWidget):
 
         zoom = self.view.zoomFactor()
 
+        self.send_max_height()
+
+        # Размер страницы в её собственных пикселях — по нему смена
+        # масштаба сразу знает, каким станет окно.
+        self.page_size = (width, height)
+
         self.resize(round(width * zoom), round(height * zoom))
 
         if self.click_through:
             self.escape.place_over(self)
+
+    def send_max_height(self):
+        """Сколько панели можно в высоту — в пикселях страницы.
+
+        Экран знает только приложение. На 145% панель выходила выше
+        экрана, и её низ уезжал за край; теперь она упирается в него, а
+        содержимое прокручивается. Запас снизу — под кнопку возврата мыши.
+        """
+
+        screen = self.screen() or QApplication.primaryScreen()
+
+        if screen is None:
+            return
+
+        room = screen.availableGeometry().height() - 48
+        zoom = self.view.zoomFactor() or 1
+
+        self.run(
+            f"window.__setMaxHeight && window.__setMaxHeight({room / zoom:.0f})"
+        )
+
+    def send_layout(self):
+        layout = settings_store.load().get("panel_layout")
+
+        self.run(
+            "window.__setLayout && window.__setLayout("
+            + json.dumps("wide" if layout == "wide" else "tall")
+            + ")"
+        )
 
     # --- режимы ---
 
@@ -1147,12 +1187,45 @@ class Overlay(QWidget):
 
         Chromium масштабирует всё сам и без потери резкости, поэтому
         пересобирать разметку под каждый размер, как раньше, не нужно.
+
+        Ползунок шлёт значение на каждое движение мыши, и панель тряслась:
+        каждый шаг — сначала страница в новом масштабе внутри окна старого
+        размера (обрезана или с пустым полем), потом окно её догоняет.
+        Поэтому шаги склеиваем, а применяем одним ходом.
         """
 
-        self.view.setZoomFactor(max(0.5, min(2.5, (percent or 100) / 100)))
+        self.pending_scale = percent
 
-        # Страница меряет себя в своих пикселях и смены зума не видит:
-        # без этого окно остаётся прежнего размера и режет панель.
+        timer = self.__dict__.get("scale_timer")
+
+        if timer is None:
+            timer = QTimer(self)
+            timer.setSingleShot(True)
+            timer.timeout.connect(self.apply_scale)
+            self.scale_timer = timer
+
+        if not timer.isActive():
+            timer.start(50)
+
+    def apply_scale(self):
+        zoom = max(0.5, min(2.5, (self.pending_scale or 100) / 100))
+        size = self.__dict__.get("page_size")
+
+        def fit():
+            if size:
+                self.resize(round(size[0] * zoom), round(size[1] * zoom))
+
+        # Растёт — сначала окно, потом страница; уменьшается — наоборот.
+        # Так ни в один момент страница не шире окна и не висит в пустоте.
+        if zoom > self.view.zoomFactor():
+            fit()
+            self.view.setZoomFactor(zoom)
+        else:
+            self.view.setZoomFactor(zoom)
+            fit()
+
+        # Точный размер всё равно скажет страница: высота меняется и от
+        # содержимого, а не только от масштаба.
         self.run("window.__refit && window.__refit()")
 
     # --- положение ---
@@ -1194,6 +1267,9 @@ class Overlay(QWidget):
 
     def save_position(self):
         settings_store.update(position=[self.x(), self.y()])
+
+        # Панель могли перетащить на другой монитор — там другая высота.
+        self.send_max_height()
 
     # --- уточнения от игрока ---
 

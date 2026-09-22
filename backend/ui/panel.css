@@ -15,14 +15,16 @@
 
 body.preview .stage { margin: 0 auto; }
 
+/* Тон — как у окон приложения: почти чёрный #0b0e13, чуть прозрачный,
+   чтобы панель лежала на игре, а не заслоняла её сплошной плитой. */
 .panel {
     flex: none;
     width: 480px;
     max-width: 100%;
     position: relative;
-    background: var(--glass);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    background: rgba(11, 14, 19, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
     box-shadow:
         0 24px 60px -20px rgba(0, 0, 0, 0.9),
         0 2px 10px rgba(0, 0, 0, 0.5);
@@ -33,32 +35,36 @@ body.preview .stage { margin: 0 auto; }
 /* шапка                                                               */
 /* ------------------------------------------------------------------ */
 
+/* Шапка без своей светлой полосы: в окнах приложения заголовок
+   стоит на том же фоне, что и всё остальное. */
 .masthead {
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    background: var(--glass-top);
-    border-bottom: 1px solid var(--line);
+    gap: 10px 12px;
+    padding: 14px 14px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* Портрет квадратом, как в справочнике: полоска 64×36 читалась как
+   значок, а не как лицо героя. */
 .portrait {
-    width: 64px;
-    height: 36px;
+    width: 50px;
+    height: 50px;
     object-fit: cover;
+    object-position: center 20%;
     display: block;
-    border-radius: 6px;
-    border: 1px solid var(--line);
+    border-radius: 11px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .titles { min-width: 0; }
 
 .hero-name {
-    font-size: 17px;
-    font-weight: 650;
-    letter-spacing: -0.2px;
-    color: var(--text);
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -0.1px;
+    color: #fff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -70,45 +76,63 @@ body.preview .stage { margin: 0 auto; }
     flex-wrap: wrap;
     row-gap: 3px;
     gap: 8px;
-    margin-top: 4px;
-    font-size: 11px;
+    margin-top: 3px;
+    font-size: 12px;
     color: var(--muted);
     font-variant-numeric: tabular-nums;
 }
 
 .hero-facts > span { white-space: nowrap; }
-.hero-facts b { color: var(--text); font-weight: 600; }
+.hero-facts b { color: var(--good); font-weight: 600; }
 .hero-facts .dot { color: var(--faint); }
+.hero-facts .auto-note { color: var(--faint); }
 
-/* Переключатель позиции. Цифры, а не выпадающий список: их пять, они
-   всегда на виду, и выбор — это один клик, а не три. */
-.roles { display: inline-flex; align-items: center; gap: 2px; }
+/* Переключатель позиции — чипами во всю ширину шапки, как в
+   справочнике: пять штук всегда на виду, выбор — один клик. */
+.role-row { grid-column: 1 / -1; }
+.role-row:empty { display: none; }
+
+.roles { display: flex; gap: 5px; }
 
 .role {
     appearance: none;
-    min-width: 20px;
-    height: 19px;
-    padding: 0 5px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid transparent;
-    border-radius: 5px;
-    color: var(--faint);
+    flex: 1 1 0;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: #c2c9d4;
     font-family: inherit;
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
     cursor: pointer;
-    font-variant-numeric: tabular-nums;
-    transition: color 0.12s ease, background-color 0.12s ease;
+    transition: color 0.12s ease, background-color 0.12s ease, border-color 0.12s ease;
 }
 
-.role:hover { color: var(--text); background: rgba(255, 255, 255, 0.1); }
+.role b { font-weight: 700; color: var(--faint); font-variant-numeric: tabular-nums; }
+
+.role:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
 .role:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .role.on {
-    color: #0a1220;
-    background: var(--accent);
-    font-weight: 700;
+    color: #fff;
+    background: rgba(76, 157, 255, 0.2);
+    border-color: rgba(76, 157, 255, 0.6);
 }
+
+.role.on b { color: var(--accent-lit); }
 
 .role-name { margin-left: 3px; color: var(--text); font-weight: 600; }
 
@@ -133,12 +157,12 @@ body.preview .stage { margin: 0 auto; }
     appearance: none;
     background: transparent;
     border: 0;
-    border-radius: 6px;
+    border-radius: 7px;
     color: var(--faint);
     font-family: inherit;
     font-size: 11px;
     font-weight: 500;
-    padding: 4px 7px;
+    padding: 6px 7px;
     cursor: pointer;
     transition: color 0.12s ease, background-color 0.12s ease;
 }
@@ -153,16 +177,34 @@ body.preview .stage { margin: 0 auto; }
 /* Свёрнутая панель — галочка смотрит вверх: нажатие её развернёт. */
 body.compact #fold svg { transform: rotate(180deg); }
 
+/* Компактная панель узкая (320 точек), и шесть кнопок съедали имя героя
+   до «M…». Меню и справочник прячем — они есть в развёрнутом виде;
+   портрет и имя поменьше, подпись фазы — под заголовком. */
+body.compact #home,
+body.compact #browse { display: none; }
+
+body.compact .portrait { width: 40px; height: 40px; border-radius: 9px; }
+body.compact .hero-name { font-size: 16px; }
+
+body.compact .now-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
 /* ------------------------------------------------------------------ */
 /* строка врагов                                                       */
 /* ------------------------------------------------------------------ */
 
-.enemies {
-    display: flex;
-    gap: 6px;
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--line-soft);
+.enemy-block {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
+
+/* Врагов ещё не видно (идёт пик) — не показываем и подпись над пустотой. */
+.enemy-block:has(.enemies:empty) { display: none; }
+
+.enemies { display: flex; gap: 6px; }
 
 .enemy {
     position: relative;
@@ -174,14 +216,14 @@ body.compact #fold svg { transform: rotate(180deg); }
     padding: 0;
     background: none;
     border: 0;
-    border-radius: 6px;
+    border-radius: 8px;
     overflow: hidden;
     cursor: pointer;
 }
 
 .enemy img {
     width: 100%;
-    height: 36px;
+    height: 38px;
     object-fit: cover;
     display: block;
     opacity: 0.82;
@@ -209,12 +251,14 @@ body.compact #fold svg { transform: rotate(180deg); }
 /* главный блок: что брать сейчас                                      */
 /* ------------------------------------------------------------------ */
 
+/* Главный блок выделен лишь слабым синим отсветом сверху: заливка
+   на полпанели спорила с тёмным тоном остального приложения. */
 .now {
-    padding: 13px 14px 15px;
+    padding: 14px 14px 16px;
     background:
         linear-gradient(180deg,
-            var(--accent-dim) 0%, rgba(76, 157, 255, 0) 70%);
-    border-bottom: 1px solid var(--line);
+            rgba(76, 157, 255, 0.09) 0%, rgba(76, 157, 255, 0) 75%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .now-head {
@@ -226,10 +270,9 @@ body.compact #fold svg { transform: rotate(180deg); }
 }
 
 .now-title {
-    font-size: 14px;
-    font-weight: 650;
-    color: var(--text);
-    letter-spacing: -0.1px;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #fff;
 }
 
 .now-phase {
@@ -261,8 +304,8 @@ body.compact #fold svg { transform: rotate(180deg); }
     height: var(--slot-lg);
     object-fit: cover;
     display: block;
-    border-radius: 8px;
-    border: 1px solid var(--line);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     background: var(--slot-bg);
     transition: transform 0.15s ease, border-color 0.15s ease;
 }
@@ -290,7 +333,7 @@ body.compact #fold svg { transform: rotate(180deg); }
 .big.keyed .art { border-color: var(--accent); }
 
 .big .name {
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 500;
     color: var(--text);
     text-align: center;
@@ -322,14 +365,15 @@ body.compact #fold svg { transform: rotate(180deg); }
 .rows {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 10px 12px 12px;
+    gap: 8px;
+    padding: 12px;
 }
 
+/* Карточки — как в справочнике: еле светлее фона, нейтральная рамка. */
 .card {
-    background: var(--card);
-    border: 1px solid var(--line-soft);
-    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.065);
+    border-radius: 11px;
     overflow: hidden;
 }
 
@@ -338,7 +382,7 @@ body.compact #fold svg { transform: rotate(180deg); }
     align-items: center;
     gap: 8px;
     width: 100%;
-    padding: 8px 10px;
+    padding: 10px 12px;
     background: none;
     border: 0;
     color: inherit;
@@ -351,13 +395,13 @@ body.compact #fold svg { transform: rotate(180deg); }
 .card-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 .card-title {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--text);
 }
 
 .card-meta {
-    font-size: 11px;
+    font-size: 11.5px;
     color: var(--faint);
     font-variant-numeric: tabular-nums;
 }
@@ -385,7 +429,7 @@ body.compact #fold svg { transform: rotate(180deg); }
 .card.folded .card-chev { transform: rotate(-45deg); }
 .card.folded .card-body { display: none; }
 
-.card-body { padding: 2px 10px 10px; }
+.card-body { padding: 0 12px 12px; }
 
 .strip { display: flex; flex-wrap: wrap; gap: 6px; }
 
@@ -407,8 +451,8 @@ body.compact #fold svg { transform: rotate(180deg); }
     height: var(--slot);
     object-fit: cover;
     display: block;
-    border-radius: 7px;
-    border: 1px solid var(--line);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     background: var(--slot-bg);
     transition: transform 0.13s ease, border-color 0.13s ease;
 }
@@ -423,7 +467,7 @@ body.compact #fold svg { transform: rotate(180deg); }
 .cell.owned:hover .art { opacity: 0.6; }
 
 .cell .tick {
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 600;
     color: var(--time);
     font-variant-numeric: tabular-nums;
@@ -489,14 +533,14 @@ body.compact #fold svg { transform: rotate(180deg); }
 /* таланты                                                             */
 /* ------------------------------------------------------------------ */
 
-.talents { display: flex; flex-direction: column; gap: 4px; }
+.talents { display: flex; flex-direction: column; gap: 6px; }
 
 .talent {
     display: grid;
-    grid-template-columns: 26px 54px 1fr;
+    grid-template-columns: 26px 58px 1fr;
     align-items: baseline;
     gap: 8px;
-    font-size: 12px;
+    font-size: 12.5px;
 }
 
 .talent .lvl {
@@ -526,9 +570,9 @@ body.compact #fold svg { transform: rotate(180deg); }
     display: flex;
     flex-wrap: wrap;
     gap: 6px 14px;
-    padding: 9px 14px 11px;
-    border-top: 1px solid var(--line-soft);
-    font-size: 10px;
+    padding: 10px 14px 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 10.5px;
     color: var(--faint);
 }
 
@@ -552,9 +596,9 @@ body.compact #fold svg { transform: rotate(180deg); }
     width: 290px;
     align-self: flex-start;
     padding: 14px 16px 16px;
-    background: var(--glass);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    background: rgba(11, 14, 19, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
     box-shadow:
         0 24px 60px -20px rgba(0, 0, 0, 0.9),
         0 2px 10px rgba(0, 0, 0, 0.5);
@@ -567,7 +611,7 @@ body.compact #fold svg { transform: rotate(180deg); }
     margin-bottom: 16px;
 }
 
-.sheet-title { font-size: 14px; font-weight: 650; color: var(--text); }
+.sheet-title { font-size: 14.5px; font-weight: 600; color: #fff; }
 
 .field { margin-bottom: 16px; }
 
@@ -668,14 +712,14 @@ input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-of
     position: fixed;
     z-index: 30;
     pointer-events: none;
-    padding: 6px 9px;
-    border-radius: 6px;
+    padding: 7px 10px;
+    border-radius: 8px;
     background: #10141b;
-    border: 1px solid var(--line);
-    box-shadow: 0 10px 26px -8px rgba(0, 0, 0, 0.9);
-    font-size: 11px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.95);
+    font-size: 12px;
     color: var(--text);
-    max-width: 280px;
+    max-width: 290px;
     opacity: 0;
     transform: translateY(3px);
     transition: opacity 0.12s ease, transform 0.12s ease;
@@ -709,10 +753,10 @@ input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-of
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 4px 5px;
+    padding: 6px 8px;
     border: 0;
-    border-radius: 6px;
-    background: var(--card);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
     text-align: left;
     cursor: help;
     color: inherit;
@@ -731,7 +775,7 @@ input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-of
 .why-text { min-width: 0; }
 
 .why-name {
-    font-size: 11.5px;
+    font-size: 12.5px;
     font-weight: 600;
     color: var(--text);
 }
@@ -747,12 +791,12 @@ input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-of
 }
 
 .why-role {
-    font-size: 10.5px;
+    font-size: 11px;
     color: var(--muted);
 }
 
 .why-who {
-    font-size: 10.5px;
+    font-size: 11px;
     color: var(--accent-lit);
 }
 
@@ -781,4 +825,115 @@ input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-of
 /* В панели кнопки стоят рядом и делят ширину поровну; в окнах они
    обычные, по размеру надписи. */
 .sheet-foot .btn,
-.field .btn { flex: 1 1 0; }
+.field .btn { flex: 1 1 auto; white-space: nowrap; }
+
+/* Подпись над строкой: «Твоя роль», «Против кого стоишь». Тише заголовков
+   карточек — это пояснение, а не раздел. */
+.block-label {
+    margin-bottom: 7px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--faint);
+}
+
+/* У подписи врагов справа — подсказка, что они нажимаются. */
+.enemy-block .block-label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.block-hint { font-size: 10.5px; font-weight: 400; color: var(--faint); opacity: 0.8; }
+
+/* ------------------------------------------------------------------ */
+/* высота не больше экрана                                             */
+/* ------------------------------------------------------------------ */
+
+/* Шапка стоит на месте, прокручивается то, что под ней. Полосы
+   прокрутки у панели нет вовсе (её прячет само окно), листают колесом. */
+.panel {
+    display: flex;
+    flex-direction: column;
+    max-height: var(--panel-max, none);
+}
+
+.masthead,
+.waiting { flex: none; }
+
+#body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* ------------------------------------------------------------------ */
+/* широкая панель                                                      */
+/* ------------------------------------------------------------------ */
+
+/* Как главное окно: слева то, на что смотрят сразу (роль, враги, что
+   брать), справа — карточки сборки. Вдвое шире, зато заметно ниже.
+   Компактный вид остаётся узким: в нём правой колонки просто нет. */
+body.wide:not(.compact) .panel { width: 940px; }
+
+body.wide:not(.compact) #body:not([hidden]) {
+    display: grid;
+    grid-template-columns: 430px minmax(0, 1fr);
+    grid-template-rows: auto auto auto 1fr;
+    align-items: start;
+}
+
+body.wide:not(.compact) .enemy-block { grid-column: 1; grid-row: 1; }
+body.wide:not(.compact) .now { grid-column: 1; grid-row: 2; }
+
+/* Скиллы и таланты — слева, под «брать сейчас»: без них левая колонка
+   стояла пустой на полпанели. */
+body.wide:not(.compact) .side-rows { grid-column: 1; grid-row: 3; padding-top: 12px; }
+
+body.wide:not(.compact) .footer {
+    grid-column: 1;
+    grid-row: 4;
+    align-self: end;
+    border-top: 0;
+}
+
+body.wide:not(.compact) #rows {
+    grid-column: 2;
+    grid-row: 1 / 5;
+    align-self: stretch;
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* В узкой панели скиллы и таланты идут сразу за остальными карточками —
+   без двойного отступа между двумя контейнерами. */
+.side-rows { padding-top: 0; }
+.side-rows:empty { display: none; }
+
+/* Выбор из двух в настройках панели — как в окне настроек приложения. */
+.segmented {
+    display: flex;
+    padding: 3px;
+    gap: 2px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.segmented button {
+    flex: 1 1 0;
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.segmented button:hover { color: var(--text); }
+.segmented button.on { background: var(--accent); color: #fff; }
+
+/* В левой колонке широкой панели восемь скиллов должны стоять в один
+   ряд, как в узкой: при 48 точках восьмой уезжал на вторую строку. */
+body.wide:not(.compact) .side-rows .skill img { width: 42px; height: 42px; }

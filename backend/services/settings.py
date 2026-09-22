@@ -55,6 +55,9 @@ DEFAULTS = {
     "notify": True,
     # На каком мониторе держать панель: имя экрана, пусто — основной.
     "panel_screen": "",
+    # Вид панели: «wide» — широкая, в две колонки (по умолчанию: так
+    # панель вдвое ниже), «tall» — узкая колонка.
+    "panel_layout": "wide",
     # Режимы панели сразу при запуске.
     "start_compact": False,
     "start_click_through": False,
@@ -74,6 +77,7 @@ OPTIONS = {
     "check_app",
     "notify",
     "panel_screen",
+    "panel_layout",
     "start_compact",
     "start_click_through",
     "default_position",

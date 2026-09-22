@@ -137,6 +137,17 @@
                         <select class="set-select" id="screen"></select>
                     </div>
 
+                    <div class="set-row">
+                        <span class="set-text">
+                            <b>Вид панели</b>
+                            <small>широкая — в две колонки, как главное окно, зато ниже</small>
+                        </span>
+                        <span class="segmented" data-choice="panel_layout" data-kind="text">
+                            <button type="button" data-value="tall">узкая</button>
+                            <button type="button" data-value="wide">широкая</button>
+                        </span>
+                    </div>
+
                     <div class="set-slider">
                         <div class="opt-row"><span>Прозрачность</span><b id="opacity-value">100%</b></div>
                         <input class="slider" id="opacity" type="range" min="20" max="100" step="5">
@@ -219,7 +230,7 @@
         ["consumables", "расходники"],
         ["unusual", "ситуативно"],
         ["situational", "против пика"],
-        ["skills", "прокачка"],
+        ["skills", "скиллы"],
         ["talents", "таланты"],
         ["footer", "подписи внизу"]
     ];
@@ -374,7 +385,11 @@
             Array.prototype.forEach.call(group.children, function (button) {
                 button.addEventListener("click", function () {
                     setChoice(group, button.dataset.value);
-                    option(group.dataset.choice, button.dataset.value === "true");
+
+                    // Выбор из слов шлём словом, выбор «да/нет» — флагом.
+                    option(group.dataset.choice, group.dataset.kind === "text"
+                        ? button.dataset.value
+                        : button.dataset.value === "true");
                 });
             });
         }
@@ -446,8 +461,13 @@
         tell("setOpacity", parseInt(opacity.value, 10));
     });
 
+    // Пока тянут — только цифра; панель перестраивается, когда отпустили.
+    // Каждый шаг менял масштаб и размер прозрачного окна, и она тряслась.
     scale.addEventListener("input", function () {
         document.getElementById("scale-value").textContent = scale.value + "%";
+    });
+
+    scale.addEventListener("change", function () {
         tell("setScale", parseInt(scale.value, 10));
     });
 
@@ -620,6 +640,9 @@
 
                 setChoice(document.querySelector("[data-choice=close_to_tray]"),
                     String(saved.close_to_tray !== false));
+
+                setChoice(document.querySelector("[data-choice=panel_layout]"),
+                    saved.panel_layout === "wide" ? "wide" : "tall");
 
                 positionSelect.value = saved.default_position || "";
 
