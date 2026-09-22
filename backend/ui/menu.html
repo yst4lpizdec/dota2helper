@@ -28,11 +28,9 @@
             <!-- Нажатие открывает проверку подключения: раньше для
                  этого была отдельная ссылка на главной, но состояние и
                  так показано здесь. -->
+            <!-- Выхода здесь нет: он в меню значка у часов, а закрытие
+                 окна программу не останавливает. -->
             <button class="side-state" id="side-state" type="button"></button>
-
-            <div class="side-links">
-                <button class="side-link quit" id="quit" type="button">Выход</button>
-            </div>
         </div>
     </nav>
 
@@ -144,43 +142,20 @@
         document.head.appendChild(script);
     }
 
-    document.getElementById("quit").addEventListener("click", function () {
-        window.__tell("quit");
-    });
-
     /* ---------------- своя рамка окна ---------------- */
 
     var titlebar = document.getElementById("titlebar");
 
-    /* Перетаскивание: страница ловит мышь и шлёт смещение приложению —
-       двигать окно умеет только оно. */
-    var dragging = false;
-    var lastX = 0;
-    var lastY = 0;
-
+    /* Перетаскивание отдаётся системе: страница только сообщает, что
+       кнопку нажали на заголовке. Свой счёт смещений залипал — отпускание
+       над рамкой раздела или за краем окна до страницы не доходило,
+       и окно ездило за мышью без нажатия. */
     titlebar.addEventListener("mousedown", function (event) {
         if (event.button !== 0 || event.target.closest(".win-btn")) { return; }
 
-        dragging = true;
-        lastX = event.screenX;
-        lastY = event.screenY;
-
         event.preventDefault();
+        window.__tell("windowStartMove");
     });
-
-    window.addEventListener("mousemove", function (event) {
-        if (!dragging) { return; }
-
-        var dx = event.screenX - lastX;
-        var dy = event.screenY - lastY;
-
-        lastX = event.screenX;
-        lastY = event.screenY;
-
-        if (dx || dy) { window.__tell("windowDrag", JSON.stringify([dx, dy])); }
-    });
-
-    window.addEventListener("mouseup", function () { dragging = false; });
 
     document.getElementById("win-min").addEventListener("click", function () {
         window.__tell("windowMinimize");
@@ -202,8 +177,10 @@
         return row;
     }
 
+    /* Проверка подключения живёт в настройках целиком: где конфиг,
+       стоит ли параметр запуска, кнопка «поставить заново». */
     side.addEventListener("click", function () {
-        open("home");
+        open("settings");
 
         var page = frame.contentWindow;
 

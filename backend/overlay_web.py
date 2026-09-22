@@ -35,9 +35,9 @@ from PySide6.QtWidgets import (
 )
 
 from config import USER_DIR
-from services import dota, settings as settings_store
+from services import autostart, dota, settings as settings_store
 from services.single_instance import SingleInstance
-from services.winapi import MOD_ALT, MOD_CONTROL, Hotkeys, set_click_through
+from services.winapi import Hotkeys, parse_combo, set_click_through
 
 
 PAGE_URL = "http://localhost:3000/"
@@ -65,6 +65,31 @@ GSI_GRACE = 90
 # матче. Нужно только на случай, когда перезапускают app.py посреди игры:
 # панель не должна мигать из-за пары пропущенных опросов.
 MATCH_GRACE = 20
+
+def hotkey_bindings(settings):
+    """Сочетания из настроек в том виде, в каком их занимает Windows.
+
+    Сочетание, которое не разобралось, заменяем стандартным: остаться
+    вовсе без горячей клавиши хуже, чем получить привычную.
+    """
+
+    chosen = {
+        **settings_store.DEFAULTS["hotkeys"],
+        **(settings.get("hotkeys") or {}),
+    }
+
+    bindings = {}
+
+    for action, combo in chosen.items():
+        parsed = parse_combo(combo) or parse_combo(
+            settings_store.DEFAULTS["hotkeys"].get(action)
+        )
+
+        if parsed:
+            bindings[action] = parsed
+
+    return bindings
+
 
 ESCAPE_STYLE = """
 #escape {
@@ -319,9 +344,82 @@ class Bridge(QObject):
 
     @Slot(result=str)
     def settings(self):
-        """Текущие настройки — страница рисует ими своё окно настроек."""
+        """Текущие настройки — страница рисует ими своё окно настроек.
 
-        return json.dumps(settings_store.load(), ensure_ascii=False)
+        Автозапуск берём из реестра, а не из файла: его можно выключить и
+        мимо нас, в диспетчере задач, и галочка не должна об этом врать.
+        """
+
+        return json.dumps(
+            {**settings_store.load(), "autostart": autostart.is_enabled()},
+            ensure_ascii=False,
+        )
+
+    @Slot(str)
+    def setOption(self, change):
+        """Одна настройка со страницы: {"key": ..., "value": ...}."""
+
+        try:
+            parsed = json.loads(change)
+            key, value = parsed["key"], parsed["value"]
+
+        except (ValueError, TypeError, KeyError):
+            return
+
+        self.window.set_option(key, value)
+
+    @Slot(bool, result=bool)
+    def setAutostart(self, enabled):
+        return autostart.set_enabled(enabled)
+
+    @Slot(result=str)
+    def screens(self):
+        """Мониторы для выбора, где держать панель."""
+
+        primary = QApplication.primaryScreen()
+
+        return json.dumps(
+            [
+                {
+                    "name": screen.name(),
+                    "number": index + 1,
+                    "width": screen.geometry().width(),
+                    "height": screen.geometry().height(),
+                    "primary": screen is primary,
+                }
+                for index, screen in enumerate(QApplication.screens())
+            ]
+        )
+
+    @Slot(str, str, result=bool)
+    def setHotkey(self, action, combo):
+        """Новое сочетание. False — не разобрали, сохранять нечего."""
+
+        return self.window.set_hotkey(action, combo)
+
+    @Slot(result=str)
+    def hotkeyTrouble(self):
+        """Какие сочетания заняла другая программа."""
+
+        return json.dumps(self.window.hotkeys.failed)
+
+    @Slot(str)
+    def copyText(self, text):
+        """Буфер обмена — через приложение.
+
+        Страница в рамке сама писать туда не может: встроенный Chromium
+        не даёт ей такого права, и кнопка «Скопировать» молча не работала.
+        """
+
+        QApplication.clipboard().setText(text)
+
+    @Slot()
+    def openLogFolder(self):
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(USER_DIR)))
+
+    @Slot()
+    def resetSettings(self):
+        self.window.reset_settings()
 
     @Slot(int)
     def setOpacity(self, percent):
@@ -448,20 +546,18 @@ class Bridge(QObject):
         # Пустая строка — «снова угадывай сам».
         self.window.tell_app("/position", {"position": position or None})
 
-    @Slot(str)
-    def windowDrag(self, delta):
-        """Окно двигает страница: своей рамки у него больше нет."""
+    @Slot()
+    def windowStartMove(self):
+        """Своей рамки у окна нет — перетаскивание ведёт система.
 
-        try:
-            dx, dy = json.loads(delta)
-
-        except (ValueError, TypeError):
-            return
+        Кнопку в этот момент ещё держат, и дальше Windows сама двигает
+        окно и сама замечает отпускание, где бы оно ни случилось.
+        """
 
         window = self.window.menu
 
-        if window is not None:
-            window.move(window.x() + int(dx), window.y() + int(dy))
+        if window is not None and window.windowHandle() is not None:
+            window.windowHandle().startSystemMove()
 
     @Slot()
     def windowMinimize(self):
@@ -475,6 +571,12 @@ class Bridge(QObject):
         Панель может идти дальше поверх игры, и значок у часов остаётся:
         закрытие окна не должно уносить с собой приложение.
         """
+
+        # Так попросили в настройках: крестик — это выход.
+        if not settings_store.load().get("close_to_tray", True):
+            self.window.quit_all()
+
+            return
 
         if self.window.menu is not None:
             self.window.menu.hide()
@@ -500,7 +602,18 @@ class Overlay(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
 
         self.click_through = False
-        self.compact = False
+
+        settings = settings_store.load()
+
+        # Режимы при запуске — из настроек. Сквозной клик включаем, только
+        # когда панель впервые покажется: у скрытой панели кнопка возврата
+        # мыши висела бы на рабочем столе сама по себе.
+        self.compact = bool(settings.get("start_compact"))
+        self.pending_click_through = bool(settings.get("start_click_through"))
+
+        # Свежие данные нашлись посреди матча — качаем после него.
+        self.pending_data = False
+        self.downloading = False
         # Панель закрыли вручную: до конца матча не показываем её снова,
         # иначе она вернётся сама через пару секунд, по таймеру.
         self.dismissed = False
@@ -513,8 +626,6 @@ class Overlay(QWidget):
         self.server_alive = False
         # Открыты ли настройки сами по себе, без панели за ними.
         self.settings_solo = False
-
-        settings = settings_store.load()
 
         # Прятать панель, пока игра не запущена. Игрок просил показываться
         # вместе с Дотой, а не висеть на рабочем столе весь день.
@@ -553,12 +664,7 @@ class Overlay(QWidget):
 
         self.tray = self.build_tray()
 
-        self.hotkeys = Hotkeys(
-            {
-                "compact": (MOD_CONTROL | MOD_ALT, ord("D")),
-                "click_through": (MOD_CONTROL | MOD_ALT, ord("F")),
-            }
-        )
+        self.hotkeys = Hotkeys(hotkey_bindings(settings))
         self.hotkeys.pressed.connect(self.on_hotkey)
         self.hotkeys.start()
 
@@ -592,6 +698,75 @@ class Overlay(QWidget):
 
         if self.compact:
             self.run("window.__setCompact(true)")
+
+        self.send_hotkeys()
+
+    def send_hotkeys(self):
+        """Подписи на панели называют сочетания — пусть называют верные."""
+
+        chosen = {
+            **settings_store.DEFAULTS["hotkeys"],
+            **(settings_store.load().get("hotkeys") or {}),
+        }
+
+        self.run(
+            "window.__setHotkeys && window.__setHotkeys("
+            + json.dumps(chosen, ensure_ascii=False)
+            + ")"
+        )
+
+    def set_hotkey(self, action, combo):
+        if action not in settings_store.DEFAULTS["hotkeys"]:
+            return False
+
+        if parse_combo(combo) is None:
+            return False
+
+        chosen = {
+            **settings_store.DEFAULTS["hotkeys"],
+            **(settings_store.load().get("hotkeys") or {}),
+            action: combo,
+        }
+
+        settings = settings_store.update(hotkeys=chosen)
+
+        self.hotkeys.rebind(hotkey_bindings(settings))
+        self.send_hotkeys()
+
+        return True
+
+    def set_option(self, key, value):
+        """Настройка со страницы: сохранить и, где нужно, применить сразу."""
+
+        if key not in settings_store.OPTIONS:
+            return
+
+        settings_store.update(**{key: value})
+
+        if key == "panel_screen":
+            # Выбрали монитор — показываем панель прямо там, чтобы было
+            # видно, куда она уехала.
+            self.reset_position()
+            self.show_overlay()
+
+    def reset_settings(self):
+        """Всё по умолчанию — и сразу на экране, без перезапуска."""
+
+        settings = settings_store.reset()
+
+        self.compact = bool(settings.get("start_compact"))
+        self.set_hide_without_dota(settings.get("hide_without_dota") is not False)
+        self.set_opacity(settings.get("opacity") or 100)
+        self.set_scale(round((settings.get("scale") or 1) * 100))
+        self.hotkeys.rebind(hotkey_bindings(settings))
+
+        if self.click_through:
+            self.set_click_through(False)
+
+        self.reset_position()
+
+        # Свёрнутые и выключенные блоки панель читает при загрузке.
+        self.view.reload()
 
     def run(self, script):
         self.view.page().runJavaScript(script)
@@ -698,7 +873,20 @@ class Overlay(QWidget):
         QTimer.singleShot(0, lambda: self._show_update_note(found))
 
     def _show_update_note(self, found):
-        if self.tray is None:
+        settings = settings_store.load()
+
+        has_data = bool((found.get("data") or {}).get("newer"))
+
+        # Данные качаем сами — но не посреди матча: подменять цифры под
+        # идущей игрой нельзя, да и трафик в этот момент нужен ей.
+        if has_data and settings.get("auto_data"):
+            self.pending_data = True
+            self.download_data_when_free()
+
+            if not found.get("app"):
+                return
+
+        if self.tray is None or not settings.get("notify", True):
             return
 
         if found.get("app"):
@@ -715,6 +903,46 @@ class Overlay(QWidget):
 
         except (TypeError, RuntimeError):
             pass
+
+    def download_data_when_free(self):
+        if not self.pending_data or self.downloading:
+            return
+
+        if self.match_in_progress():
+            return
+
+        self.pending_data = False
+        self.downloading = True
+
+        def fetch():
+            try:
+                import app as helper
+
+                report = helper.HELPER.update_data()
+
+            except Exception as error:
+                report = {"error": str(error)}
+
+            QTimer.singleShot(0, lambda: self._data_downloaded(report))
+
+        threading.Thread(target=fetch, daemon=True).start()
+
+    def _data_downloaded(self, report):
+        self.downloading = False
+
+        if report.get("error"):
+            print(f"данные сами не обновились: {report['error']}")
+
+            return
+
+        if self.tray is not None and settings_store.load().get("notify", True):
+            self.tray.showMessage(
+                "Dota2Helper",
+                f"Данные обновлены: патч {report.get('patch')}, "
+                f"{report.get('matches')} матчей",
+                QSystemTrayIcon.Information,
+                6000,
+            )
 
     def on_tray(self, reason):
         if reason == QSystemTrayIcon.Trigger:
@@ -820,6 +1048,9 @@ class Overlay(QWidget):
         # устареть по времени — проверяем видимость на каждом опросе.
         self.check_dota()
 
+        # Данные ждали конца матча — матч кончился.
+        self.download_data_when_free()
+
     def note_match_live(self, live):
         if live:
             self.match_seen_at = time.monotonic()
@@ -900,6 +1131,10 @@ class Overlay(QWidget):
 
         if visible:
             self.show()
+
+            if self.pending_click_through:
+                self.pending_click_through = False
+                self.set_click_through(True)
         else:
             self.hide()
             self.escape.hide()
@@ -940,8 +1175,19 @@ class Overlay(QWidget):
 
         self.reset_position()
 
+    def panel_screen(self):
+        """Монитор из настроек; отключили его — основной."""
+
+        wanted = settings_store.load().get("panel_screen")
+
+        for screen in QApplication.screens():
+            if wanted and screen.name() == wanted:
+                return screen
+
+        return QApplication.primaryScreen()
+
     def reset_position(self):
-        corner = QApplication.primaryScreen().availableGeometry().topLeft()
+        corner = self.panel_screen().availableGeometry().topLeft()
 
         self.move(corner.x() + 40, corner.y() + 40)
         self.save_position()
@@ -1096,8 +1342,13 @@ def main():
         print(f"проверка обновлений не запустилась: {error}")
 
     # Запустили приложение, а матча нет — человек пришёл не за панелью,
-    # а в само приложение. Показываем ему главное меню.
-    if not window.isVisible():
+    # а в само приложение. Показываем ему главное меню. Кроме запуска
+    # вместе с Windows и случая, когда окно попросили не открывать.
+    quiet = autostart.TRAY_FLAG in sys.argv or not settings_store.load().get(
+        "open_window", True
+    )
+
+    if not window.isVisible() and not quiet:
         window.open_menu()
 
     return app.exec()

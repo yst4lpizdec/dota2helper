@@ -21,6 +21,45 @@ MOD_SHIFT = 0x0004
 MOD_NOREPEAT = 0x4000
 
 WM_HOTKEY = 0x0312
+WM_QUIT = 0x0012
+
+MODIFIERS = {"ctrl": MOD_CONTROL, "alt": MOD_ALT, "shift": MOD_SHIFT}
+
+
+def parse_combo(text):
+    """«Ctrl+Alt+D» → (модификаторы, код клавиши) или None.
+
+    Клавиша — буква, цифра или F1–F12. Букве и цифре нужен хотя бы один
+    модификатор: голая «D» отняла бы у игры клавишу целиком.
+    """
+
+    parts = [part.strip() for part in (text or "").split("+") if part.strip()]
+
+    if not parts:
+        return None
+
+    mods = 0
+
+    for part in parts[:-1]:
+        flag = MODIFIERS.get(part.lower())
+
+        if flag is None:
+            return None
+
+        mods |= flag
+
+    key = parts[-1].upper()
+
+    if len(key) == 1 and (key.isalpha() or key.isdigit()) and key.isascii():
+        if not mods:
+            return None
+
+        return mods, ord(key)
+
+    if key.startswith("F") and key[1:].isdigit() and 1 <= int(key[1:]) <= 12:
+        return mods, 0x70 + int(key[1:]) - 1
+
+    return None
 
 GWL_EXSTYLE = -20
 WS_EX_TRANSPARENT = 0x00000020
@@ -85,17 +124,43 @@ class Hotkeys(QObject):
         # имя действия -> (модификаторы, код клавиши)
         self.bindings = dict(bindings)
         self.failed = []
+        self.thread_id = None
+        self.thread = None
 
     def start(self):
         if _user32() is None:
             return
 
-        threading.Thread(target=self._loop, daemon=True).start()
+        self.thread = threading.Thread(target=self._loop, daemon=True)
+        self.thread.start()
+
+    def rebind(self, bindings):
+        """Новые сочетания без перезапуска программы.
+
+        Горячие клавиши принадлежат потоку, который их занял, поэтому
+        старый поток останавливаем (он сам их отпустит) и поднимаем новый.
+        """
+
+        user32 = _user32()
+
+        if user32 is not None and self.thread_id:
+            user32.PostThreadMessageW(self.thread_id, WM_QUIT, 0, 0)
+
+            if self.thread is not None:
+                self.thread.join(timeout=1.0)
+
+        self.bindings = dict(bindings)
+        self.failed = []
+        self.thread_id = None
+
+        self.start()
 
     def _loop(self):
         from ctypes import wintypes
 
         user32 = _user32()
+
+        self.thread_id = ctypes.windll.kernel32.GetCurrentThreadId()
 
         user32.RegisterHotKey.argtypes = [
             wintypes.HWND,
@@ -142,3 +207,8 @@ class Hotkeys(QObject):
 
             if name:
                 self.pressed.emit(name)
+
+        # Попросили остановиться — отпускаем сочетания, иначе новый поток
+        # не сможет занять те же самые.
+        for index in names:
+            user32.UnregisterHotKey(None, index)

@@ -10,26 +10,26 @@
 </head>
 <body class="browse">
 
-<header class="top">
-    <div class="top-title">справочник</div>
-
-    <!-- Два разреза одних и тех же данных: «что собирают на герое» и
-         «кто вообще берёт этот предмет». -->
-    <div class="modes">
-        <button class="mode on" id="mode-heroes" type="button">герои</button>
-        <button class="mode" id="mode-items" type="button">предметы</button>
-    </div>
-
-    <input class="search" id="search" type="search" autocomplete="off"
-           placeholder="найти по имени">
-
-    <div class="source" id="source"></div>
-</header>
-
 <main class="split">
-    <!-- Слева весь список героев: искать удобно, но и просто листать
-         глазами тоже должно быть можно. -->
-    <nav class="roster" id="roster"></nav>
+    <!-- Верхней полосы нет: переключатель и поиск стоят над списком,
+         к которому относятся. Полоса с цифрами сбора повторяла главную. -->
+    <aside class="roster-col">
+        <div class="roster-top">
+            <!-- Два разреза одних и тех же данных: «что собирают на герое»
+                 и «кто вообще берёт этот предмет». -->
+            <div class="modes">
+                <button class="mode on" id="mode-heroes" type="button">Герои</button>
+                <button class="mode" id="mode-items" type="button">Предметы</button>
+            </div>
+
+            <input class="search" id="search" type="search" autocomplete="off"
+                   placeholder="Поиск героя…">
+        </div>
+
+        <!-- Весь список героев: искать удобно, но и просто листать
+             глазами тоже должно быть можно. -->
+        <nav class="roster" id="roster"></nav>
+    </aside>
 
     <section class="guide" id="guide">
         <div class="empty" id="empty">выбери героя слева</div>
@@ -83,16 +83,6 @@
         return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
     }
 
-    /* Номер версии у STRATZ — внутренний («182»), игроку он ничего не
-       говорит и путается с патчем Доты. Дата сбора понятнее. */
-    function when(stamp) {
-        if (!stamp) { return "неизвестно"; }
-
-        return new Date(stamp * 1000).toLocaleDateString("ru-RU", {
-            day: "numeric", month: "long", year: "numeric"
-        });
-    }
-
     /* ---------------- подсказка ---------------- */
 
     var tip = document.getElementById("tip");
@@ -107,9 +97,14 @@
             tip.style.left = x + "px";
             tip.style.top = y + "px";
         });
-        node.addEventListener("mouseleave", function () {
-            tip.classList.remove("show");
-        });
+        node.addEventListener("mouseleave", hideTip);
+    }
+
+    /* Строку под курсором могут перерисовать — сменили вкладку или
+       героя, — и «мышь ушла» тогда не приходит: подсказка оставалась
+       висеть. Поэтому прячем её при каждой перерисовке. */
+    function hideTip() {
+        tip.classList.remove("show");
     }
 
     /* ---------------- список героев ---------------- */
@@ -168,9 +163,8 @@
             cell.appendChild(artwork("items", item.item, "pick-item"));
             cell.appendChild(el("span", "pick-name", item.display));
 
-            // Сразу видно, есть ли по предмету вообще что показывать.
-            cell.appendChild(el("span", "pick-tail",
-                item.guides ? item.guides + " сб." : "—"));
+            // В скольких сборках встречается: пустых в списке нет.
+            cell.appendChild(el("span", "pick-tail", item.guides + " сб."));
 
             cell.addEventListener("click", function () {
                 chosenItem = item.item;
@@ -193,8 +187,8 @@
         document.getElementById("mode-items").classList.toggle("on", next === "items");
 
         search.placeholder = next === "items"
-            ? "предмет: найти по имени"
-            : "герой: найти по имени";
+            ? "Поиск предмета…"
+            : "Поиск героя…";
 
         search.value = "";
         search.focus();
@@ -237,6 +231,7 @@
     }
 
     function show(node) {
+        hideTip();
         empty.hidden = true;
         view.hidden = false;
         view.innerHTML = "";
@@ -251,8 +246,11 @@
             var role = ROLES[entry.position] || [digit, ""];
             var on = entry.position === state.position;
 
-            var cell = el("button", "role" + (on ? " on" : ""), digit + " · " + role[0]);
+            var cell = el("button", "role" + (on ? " on" : ""));
             cell.type = "button";
+            cell.appendChild(el("b", null, digit));
+            cell.appendChild(document.createTextNode(
+                role[0].charAt(0).toUpperCase() + role[0].slice(1)));
 
             bindTip(cell, role[1] + " &middot; " + entry.matches + " игр");
 
@@ -294,7 +292,12 @@
         var body = el("div", "line-body");
         body.appendChild(el("div", "line-name", entry.display || entry.item));
 
-        if (entry.role) {
+        if (kind === "start") {
+            // «×1» под каждым предметом — шум: пишем, только когда больше.
+            if (entry.count > 1) {
+                body.appendChild(el("div", "line-role", "×" + entry.count));
+            }
+        } else if (entry.role) {
             body.appendChild(el("div", "line-role", entry.role));
         }
 
@@ -303,8 +306,6 @@
         var tail = el("div", "line-tail");
 
         if (kind === "start") {
-            tail.appendChild(el("span", "line-share",
-                entry.count > 1 ? "x" + entry.count : "x1"));
             tail.appendChild(el("span", "line-gold",
                 entry.cost * (entry.count || 1)));
         } else {
@@ -360,28 +361,36 @@
 
     function buildTab(state) {
         var wrap = el("div");
-        var box = el("div", "cols");
+
+        /* Две независимые колонки, а не сетка по парам: в сетке короткая
+           стартовая закупка оставляла под собой дыру высотой с соседнюю
+           «раннюю игру». Слева — сборка по времени сверху вниз, справа —
+           поздняя игра и всё, что берут по обстоятельствам. */
+        var box = el("div", "cols stack");
+        var left = el("div", "stack-col");
+        var right = el("div", "stack-col");
+
+        box.appendChild(left);
+        box.appendChild(right);
 
         var purchase = state.starting_purchase || {};
 
         if ((purchase.items || []).length) {
-            box.appendChild(column("Стартовая закупка",
+            left.appendChild(column("Стартовая закупка",
                 purchase.total + " / " + purchase.budget + " зол.",
                 purchase.items, "start"));
         }
 
-        [["early", "Ранняя игра"], ["core", "Основной закуп"],
-         ["late", "Поздняя игра"]].forEach(function (pair) {
-            var entries = state[pair[0]] || [];
+        [["early", "Ранняя игра", left], ["core", "Основной закуп", left],
+         ["late", "Поздняя игра", right]].forEach(function (phase) {
+            var entries = state[phase[0]] || [];
 
             if (!entries.length) { return; }
 
-            box.appendChild(column(pair[1], phaseNote(entries), entries));
+            phase[2].appendChild(column(phase[1], phaseNote(entries), entries));
         });
 
-        wrap.appendChild(box);
-
-        var extra = el("div", "cols two");
+        var extra = right;
 
         if ((state.consumables || []).length) {
             extra.appendChild(column("Расходники и варды", null,
@@ -427,7 +436,7 @@
             extra.appendChild(card);
         }
 
-        if (extra.children.length) { wrap.appendChild(extra); }
+        wrap.appendChild(box);
 
         return wrap;
     }
@@ -440,7 +449,6 @@
 
             var head = el("div", "col-head");
             head.appendChild(el("span", "col-title", "Порядок прокачки"));
-            head.appendChild(el("span", "col-note", "с первого уровня"));
             card.appendChild(head);
 
             var skills = el("div", "skills");
@@ -464,7 +472,6 @@
 
             var thead = el("div", "col-head");
             thead.appendChild(el("span", "col-title", "Таланты"));
-            thead.appendChild(el("span", "col-note", "сторона в дереве"));
             tcard.appendChild(thead);
 
             var talents = el("div", "talents");
@@ -472,7 +479,7 @@
             state.talents.forEach(function (entry) {
                 var line = el("div", "talent" + (entry.stale ? " stale" : ""));
                 line.appendChild(el("span", "lvl", entry.level));
-                line.appendChild(el("span", "side" + (entry.side ? "" : " none"),
+                line.appendChild(el("span", "tside" + (entry.side ? "" : " none"),
                     entry.side || "—"));
 
                 var what = el("span", "what", entry.display || entry.talent);
@@ -529,8 +536,8 @@
         facts.appendChild(el("span", null, count(state.matches) + " игр"));
 
         titles.appendChild(facts);
+        titles.appendChild(positions(state));
         head.appendChild(titles);
-        head.appendChild(positions(state));
 
         page.appendChild(head);
 
@@ -676,12 +683,6 @@
         .then(function (answer) { return answer.json(); })
         .then(function (data) {
             heroes = data.heroes || [];
-
-            document.getElementById("source").innerHTML =
-                "<b>" + count(data.matches) + "</b> матчей &middot; данные от "
-                + when(data.built_at) + " &middot; "
-                + '<a href="https://stratz.com" target="_blank" rel="noopener">STRATZ</a>'
-                + " &middot; by yst4l";
 
             drawRoster();
             search.focus();

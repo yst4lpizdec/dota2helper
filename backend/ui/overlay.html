@@ -159,9 +159,17 @@
 
     var tip = document.getElementById("tip");
 
+    /* Сочетания приходят из настроек: их можно переназначить, и
+       подсказка должна называть те, что работают. */
+    var HOTKEYS = { compact: "Ctrl+Alt+D", click_through: "Ctrl+Alt+F" };
+
+    window.__setHotkeys = function (keys) {
+        HOTKEYS = keys || HOTKEYS;
+    };
+
     function bindTip(node, html) {
         node.addEventListener("mouseenter", function () {
-            tip.innerHTML = html;
+            tip.innerHTML = typeof html === "function" ? html() : html;
             tip.classList.add("show");
             var box = node.getBoundingClientRect();
             tip.style.left = "0px";
@@ -853,8 +861,9 @@
 
     /* Подписи к значкам — своей подсказкой, а не системной: системная
        над окном поверх игры показывается не всегда. */
-    bindTip(document.getElementById("mouse"),
-        "клики панели или игре &middot; Ctrl+Alt+F");
+    bindTip(document.getElementById("mouse"), function () {
+        return "клики панели или игре &middot; " + HOTKEYS.click_through;
+    });
     bindTip(document.getElementById("browse"),
         "справочник: герои, предметы и проценты");
     bindTip(document.getElementById("home"), "главное меню");
@@ -867,8 +876,9 @@
     document.getElementById("browse").addEventListener("click", function () {
         tell("openBrowser");
     });
-    bindTip(document.getElementById("fold"),
-        "краткий вид &middot; Ctrl+Alt+D");
+    bindTip(document.getElementById("fold"), function () {
+        return "краткий вид &middot; " + HOTKEYS.compact;
+    });
     bindTip(document.getElementById("quit"),
         "убрать панель &middot; приложение останется в трее");
 

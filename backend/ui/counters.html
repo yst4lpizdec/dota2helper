@@ -7,16 +7,21 @@
 <link rel="stylesheet" href="/base.css">
 <link rel="stylesheet" href="/windows.css">
 </head>
-<body class="page">
+<!-- Класс browse — чтобы выглядеть как справочник: список, шапка героя
+     и карточки у них одни и те же. -->
+<body class="page browse counters">
 
 <div class="split">
     <!-- Слева тот же список героев, что и в справочнике: выбор героя —
          это первое, что здесь делают. -->
-    <nav class="roster">
-        <input class="search" id="search" type="search" autocomplete="off"
-               placeholder="найти героя">
-        <div id="roster"></div>
-    </nav>
+    <aside class="roster-col">
+        <div class="roster-top">
+            <input class="search" id="search" type="search" autocomplete="off"
+                   placeholder="Поиск героя…">
+        </div>
+
+        <nav class="roster" id="roster"></nav>
+    </aside>
 
     <section class="guide">
         <div class="empty" id="empty">выбери героя слева</div>

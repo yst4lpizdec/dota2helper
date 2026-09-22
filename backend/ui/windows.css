@@ -16,18 +16,6 @@ body.browse {
     overflow: hidden;
 }
 
-.top {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 16px;
-    background: var(--glass-top);
-    border-bottom: 1px solid var(--line);
-    flex: none;
-}
-
-.top-title { font-size: 14px; font-weight: 650; color: var(--text); }
-
 .search {
     flex: 1 1 auto;
     max-width: 340px;
@@ -42,11 +30,6 @@ body.browse {
 
 .search::placeholder { color: var(--faint); }
 .search:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-
-.source { margin-left: auto; font-size: 11px; color: var(--faint); }
-.source b { color: var(--muted); font-weight: 600; }
-.source a { color: var(--accent); text-decoration: none; }
-.source a:hover { text-decoration: underline; }
 
 .split { display: flex; flex: 1 1 auto; min-height: 0; }
 
@@ -460,41 +443,140 @@ body.menu { background: #0b0e13; }
 /* ------------------------------------------------------------------ */
 
 .about {
+    display: flex;
+    flex-direction: column;
     padding: 14px 16px;
     border-radius: 9px;
     border: 1px solid var(--line-soft);
     background: var(--card);
 }
 
-.about-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px 18px;
+/* Заголовок карточки — одинаковый у меты и «о приложении»: карточки
+   стоят рядом, и разные шапки выглядели как два чужих виджета. */
+.card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
 }
 
-.about-grid div { display: flex; justify-content: space-between; gap: 10px; }
-.about-grid span { font-size: 11.5px; color: var(--faint); }
-.about-grid b {
-    font-size: 12px;
+.card-title { font-size: 13.5px; font-weight: 600; }
+
+.ver-chip {
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--muted);
+    font-size: 10.5px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
 
-.about-links {
+/* Три числа крупно, подпись мелко под ними. */
+.about-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--line-soft);
+    flex: 1;
+    max-height: 110px;
+}
+
+.about-stats div {
     display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    padding: 16px 14px;
+}
+
+.about-stats div + div { border-left: 1px solid var(--line-soft); }
+
+.about-stats b {
+    font-size: 21px;
+    font-weight: 650;
+    letter-spacing: -0.4px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.about-stats span { font-size: 11.5px; color: var(--faint); }
+
+/* Ссылки слева, проверка обновлений справа — одной строкой внизу. */
+.about-foot {
+    display: flex;
+    align-items: center;
     gap: 14px;
-    margin: 13px 0 11px;
-    padding-top: 11px;
-    border-top: 1px solid var(--line-soft);
+    margin-top: auto;
+    padding-top: 14px;
 }
 
-.about-links a {
-    font-size: 11.5px;
-    color: var(--accent);
+.about-foot a {
+    display: inline-flex;
+    white-space: nowrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
     text-decoration: none;
+    transition: color 0.12s ease;
 }
 
-.about-links a:hover { text-decoration: underline; }
+.about-foot a:hover { color: var(--text); }
+
+.about-foot a svg { width: 14px; height: 14px; flex: none; }
+.about-foot a svg.stratz { width: 17px; height: 17px; margin: -2px -1px -1px -2px; }
+
+/* Автор — в шапке рядом с версией, тише заголовка: внизу строка
+   ссылок с ним не помещалась и ломалась в два этажа. */
+.about-meta { display: flex; align-items: center; gap: 8px; }
+
+.about-author { font-size: 11px; color: var(--faint); }
+
+/* Не серая плашка, а тихая кнопка с иконкой: действие редкое и не
+   главное на экране. */
+.about-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    padding: 6px 11px 6px 9px;
+    white-space: nowrap;
+    border-radius: 999px;
+    border: 1px solid rgba(76, 157, 255, 0.28);
+    background: rgba(76, 157, 255, 0.1);
+    color: var(--accent-lit);
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.about-check:hover {
+    background: rgba(76, 157, 255, 0.18);
+    border-color: rgba(76, 157, 255, 0.45);
+}
+
+.about-check:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.about-check:disabled { cursor: default; }
+
+.about-check svg { width: 13px; height: 13px; flex: none; }
+
+.about-check.spin svg { animation: about-spin 0.8s linear infinite; }
+
+.about-check.done {
+    border-color: rgba(80, 200, 120, 0.3);
+    background: rgba(80, 200, 120, 0.1);
+    color: var(--good);
+}
+
+@keyframes about-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .about-check.spin svg { animation: none; }
+}
 
 /* ------------------------------------------------------------------ */
 /* строка состояния                                                     */
@@ -845,7 +927,7 @@ body.shell { background: #090b10; overflow: hidden; }
 
 .app {
     display: grid;
-    grid-template-columns: 196px 1fr;
+    grid-template-columns: 232px 1fr;
     height: 100vh;
 }
 
@@ -925,27 +1007,6 @@ body.shell { background: #090b10; overflow: hidden; }
 .side-dot.bad { color: #ff9b8f; }
 .side-dot.bad i { background: #ff6b5b; }
 
-.side-links {
-    display: flex;
-    gap: 14px;
-    margin-top: 14px;
-    padding: 12px 10px 0;
-    border-top: 1px solid var(--line-soft);
-}
-
-.side-link {
-    border: 0;
-    padding: 0;
-    background: none;
-    font-family: inherit;
-    font-size: 11.5px;
-    color: var(--muted);
-    cursor: pointer;
-}
-
-.side-link:hover { color: var(--text); }
-.side-link.quit:hover { color: #ff9b8f; }
-
 .stage { min-width: 0; overflow: hidden; }
 
 .frame {
@@ -964,7 +1025,7 @@ body.page { background: #0b0e13; }
 body.home-page .home {
     max-width: none;
     margin: 0;
-    padding: 0 22px 20px;
+    padding: 0 36px 22px;
     gap: 14px;
 }
 
@@ -1171,15 +1232,15 @@ body.own-art .hero-art::after {
     background:
         linear-gradient(
             180deg,
-            rgba(8, 11, 16, 0.2) 0%,
-            rgba(8, 11, 16, 0.55) 55%,
-            rgba(8, 11, 16, 0.68) 100%
+            rgba(8, 11, 16, 0.12) 0%,
+            rgba(8, 11, 16, 0.45) 55%,
+            rgba(8, 11, 16, 0.66) 100%
         ),
         linear-gradient(
             90deg,
-            rgba(8, 11, 16, 0.82) 0%,
-            rgba(8, 11, 16, 0.3) 52%,
-            rgba(8, 11, 16, 0.22) 100%
+            rgba(8, 11, 16, 0.8) 0%,
+            rgba(8, 11, 16, 0.24) 52%,
+            rgba(8, 11, 16, 0.12) 100%
         );
 }
 
@@ -1195,11 +1256,55 @@ body.home-page .hero-banner {
     overflow: visible;
 }
 
-.hero-text { padding: 0; max-width: 460px; }
+/* Текст свободнее: полужирный заголовок с обычной разрядкой и описание
+   крупнее в две строки. Жирный 700 с поджатыми буквами и узкая колонка
+   делали шапку сдавленной. */
+.hero-text { padding: 0; max-width: 560px; }
 
-.hero-text h1 { font-size: 25px; }
+.hero-text h1 {
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: -0.1px;
+    color: #fff;
+}
 
-.hero-text p { margin: 8px 0 20px; font-size: 13px; }
+.hero-text p {
+    max-width: 480px;
+    margin: 12px 0 28px;
+    font-size: 15.5px;
+    line-height: 1.6;
+    color: #b3bccb;
+}
+
+/* Кнопка — главное действие окна, и выглядит соответственно: широкая,
+   высокая, с градиентом и подсветкой снизу. */
+.big-btn {
+    justify-content: center;
+    gap: 14px;
+    min-width: 290px;
+    height: 54px;
+    padding: 0 30px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #4a95ff 0%, #2470ea 100%);
+    color: #fff;
+    font-size: 15.5px;
+    font-weight: 600;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.22),
+        0 12px 30px -12px rgba(46, 128, 255, 0.95);
+    transition: filter 0.13s ease, transform 0.13s ease;
+}
+
+.big-btn:hover { background: linear-gradient(180deg, #5ba0ff 0%, #2f7af2 100%); }
+
+.big-btn-mark { width: 26px; height: 26px; }
+
+.big-btn-note {
+    width: 290px;
+    margin-top: 10px;
+    text-align: center;
+    font-size: 12px;
+}
 
 /* Стеклянные карточки: полупрозрачный фон, размытие и светлая грань
    сверху — она даёт край, за который цепляется глаз. */
@@ -1241,42 +1346,44 @@ body.home-page .status {
     border-right-color: rgba(255, 255, 255, 0.06);
 }
 
-.side-brand { padding-bottom: 20px; font-size: 14px; }
+.side { padding: 18px 12px 16px; }
 
-.side-logo { width: 22px; height: 22px; }
-
-.side-nav { gap: 3px; }
-
-/* Значок в своём квадрате: у референса именно это отличает меню от
-   списка ссылок. */
-.side-item {
+.side-brand {
     gap: 11px;
-    padding: 8px 9px;
-    font-size: 13px;
+    padding: 4px 10px 26px;
+    font-size: 17px;
+    font-weight: 650;
+    letter-spacing: 0;
 }
 
-.side-item svg {
-    width: 16px;
-    height: 16px;
-    padding: 6px;
-    box-sizing: content-box;
-    border-radius: 7px;
-    background: rgba(255, 255, 255, 0.05);
-    transition: background-color 0.12s ease, color 0.12s ease;
+.side-logo { width: 28px; height: 28px; border-radius: 7px; }
+
+.side-nav { gap: 4px; }
+
+/* Пункты крупные и светлые, значки без подложек: квадраты вокруг
+   значков делали меню мелким и пёстрым. */
+.side-item {
+    gap: 13px;
+    padding: 12px 14px;
+    border-radius: 9px;
+    color: #b9c1cd;
+    font-size: 14.5px;
+    font-weight: 500;
 }
 
-.side-item:hover svg { background: rgba(255, 255, 255, 0.09); }
+.side-item svg { width: 20px; height: 20px; color: #8f9aab; }
 
+.side-item:hover svg { color: var(--text); }
+
+/* Выбранный — полоса слева и заливка, тающая вправо. */
 .side-item.on {
-    background: rgba(76, 157, 255, 0.14);
-    color: #dbe9ff;
+    background: linear-gradient(90deg, rgba(76, 157, 255, 0.3) 0%, rgba(76, 157, 255, 0.08) 100%);
+    box-shadow: inset 3px 0 0 var(--accent);
+    color: #fff;
     font-weight: 600;
 }
 
-.side-item.on svg {
-    background: var(--accent);
-    color: #08111e;
-}
+.side-item.on svg { color: var(--accent-lit); }
 
 /* ------------------------------------------------------------------ */
 /* нижняя половина главной                                              */
@@ -1286,7 +1393,7 @@ body.home-page .status {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
-    align-items: start;
+    align-items: stretch;
 }
 
 .peek {
@@ -1299,15 +1406,6 @@ body.home-page .status {
         0 14px 34px -18px rgba(0, 0, 0, 0.9);
     border-radius: 12px;
 }
-
-.peek-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-bottom: 10px;
-}
-
-.peek-head span { font-size: 12px; font-weight: 650; }
 
 .peek-more {
     border: 0;
@@ -1323,15 +1421,29 @@ body.home-page .status {
 
 .peek-row {
     display: grid;
-    grid-template-columns: 30px 1fr 64px 42px 42px;
+    grid-template-columns: 30px 1fr 64px 42px 46px;
     align-items: center;
     gap: 9px;
-    padding: 3px 0;
-    font-size: 11.5px;
+    margin: 0 -6px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    font-size: 12.5px;
     font-variant-numeric: tabular-nums;
 }
 
 .peek-row img { width: 30px; border-radius: 4px; background: var(--slot-bg); }
+
+.peek-row:not(.peek-cols):hover { background: rgba(255, 255, 255, 0.04); }
+
+/* Подписи колонок: без них «7.2%» и «54.3%» рядом не отличить. */
+.peek-row.peek-cols {
+    padding-top: 0;
+    padding-bottom: 4px;
+    font-size: 10.5px;
+    color: var(--faint);
+}
+
+.peek-cols span { text-align: right; }
 
 .peek-name { font-weight: 600; }
 
@@ -1347,10 +1459,6 @@ body.home-page .status {
 .peek-share { color: var(--muted); text-align: right; }
 .peek-wr { color: var(--muted); text-align: right; }
 .peek-wr.up { color: var(--good); }
-
-/* Карточка «о приложении» стоит рядом — её сетка была рассчитана на всю
-   ширину окна. */
-.two-up .about-grid { grid-template-columns: 1fr; gap: 7px; }
 
 /* ------------------------------------------------------------------ */
 /* раскладка главной по высоте                                          */
@@ -1496,5 +1604,620 @@ body.home-page .live:not([hidden]) + .two-up { margin-top: 12px; }
 
 /* Разделам нужно место под полосой, иначе кнопки лягут на содержимое. */
 body.page .sheet { padding-top: 34px; }
-body.home-page .hero-banner { padding-top: 40px; }
-body.browse .top { padding-right: 84px; }
+body.home-page .hero-banner { padding-top: 78px; }
+
+
+/* ------------------------------------------------------------------ */
+/* справочник в стиле референса                                         */
+/* ------------------------------------------------------------------ */
+
+/* Всё ниже привязано к body.browse: у контрпиков те же классы строк и
+   карточек, и задевать их этой переделкой не нужно. */
+
+/* Синеватая глубина вместо плоской черноты: сверху справа свет, книзу
+   темнее. На ровном #0b0e13 карточки стеклом не читались. */
+body.browse {
+    /* Ровный тёмный, как у меты: синий отсвет делал страницу светлее
+       остальных разделов. */
+    background: #0b0e13;
+}
+
+/* Колонка списка: переключатель и поиск сверху, ниже сам список. */
+body.browse .roster-col {
+    flex: none;
+    width: 212px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    background: none;
+}
+
+body.browse .roster-top {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 10px 8px;
+}
+
+body.browse .modes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+body.browse .mode {
+    padding: 6px 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--muted);
+    font-size: 12.5px;
+}
+
+body.browse .mode:hover { background: rgba(255, 255, 255, 0.06); }
+body.browse .mode.on { background: var(--accent); color: #fff; }
+
+body.browse .search {
+    max-width: none;
+    padding: 9px 12px;
+    border-radius: 9px;
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 13px;
+}
+
+body.browse .roster {
+    flex: 1;
+    width: auto;
+    padding: 2px 10px 10px;
+    border-right: 0;
+}
+
+body.browse .pick { padding: 6px 8px; font-size: 13.5px; color: #c2c9d4; }
+
+body.browse .pick.on {
+    background: linear-gradient(90deg, rgba(76, 157, 255, 0.28) 0%, rgba(76, 157, 255, 0.08) 100%);
+    color: #fff;
+}
+
+/* Полосе с кнопками окна нужно место сверху. */
+body.browse .guide { padding: 30px 22px 24px; }
+
+body.browse .guide-page { max-width: none; gap: 0; }
+
+/* Шапка героя: портрет, под именем цифры и позиции. Позиции сбоку
+   отнимали место у имени, и длинные имена ломались в две строки. */
+body.browse .hero-head {
+    align-items: flex-start;
+    gap: 18px;
+    padding: 0 0 18px;
+}
+
+body.browse .hero-face {
+    width: 84px;
+    height: 84px;
+    object-fit: cover;
+    object-position: center 20%;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.9);
+}
+
+body.browse .hero-name {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+body.browse .hero-facts { margin-top: 3px; font-size: 13px; }
+body.browse .hero-facts b { color: var(--good); font-weight: 600; }
+body.browse .hero-facts .dot { color: var(--faint); }
+
+/* Позиции — отдельными чипами с воздухом между ними. */
+body.browse .roles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+body.browse .role {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    color: #c2c9d4;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+body.browse .role b { font-weight: 700; color: var(--faint); }
+
+body.browse .role:hover {
+    border-color: rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text);
+}
+
+body.browse .role:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+body.browse .role.on {
+    border-color: rgba(76, 157, 255, 0.6);
+    background: rgba(76, 157, 255, 0.2);
+    color: #fff;
+}
+
+body.browse .role.on b { color: var(--accent-lit); }
+
+/* Вкладки крупнее: это главный переключатель страницы. */
+body.browse .tabs {
+    gap: 26px;
+    margin-bottom: 16px;
+    border-bottom-color: rgba(255, 255, 255, 0.07);
+}
+
+body.browse .tab { padding-bottom: 10px; font-size: 13.5px; color: var(--muted); }
+body.browse .tab:hover { color: var(--text); }
+body.browse .tab.on { color: #fff; }
+
+/* Шесть карточек в две колонки — три ряда по паре. */
+body.browse .cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+body.browse .cols.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+body.browse .col {
+    background: rgba(255, 255, 255, 0.025);
+    border-color: rgba(255, 255, 255, 0.065);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 16px 34px -20px rgba(0, 0, 0, 0.95);
+}
+
+body.browse .col-head { padding: 13px 14px 6px; border-bottom: 0; }
+body.browse .col-title { font-size: 13px; font-weight: 600; }
+body.browse .col-note { font-size: 11px; }
+
+body.browse .col-list { padding: 4px 6px 8px; }
+
+body.browse .line { gap: 10px; padding: 5px 8px; }
+
+body.browse .line-art {
+    width: 34px;
+    height: 25px;
+    object-fit: cover;
+    border-radius: 5px;
+}
+
+body.browse .line-name {
+    font-size: 12.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+body.browse .line-role,
+body.browse .line-why { font-size: 11px; }
+
+body.browse .line-share { font-size: 12px; }
+
+body.browse .line-time,
+body.browse .line-gold { font-size: 11px; }
+
+/* ---------------- прокачка и таланты ---------------- */
+
+/* Эти стили жили в panel.css, а справочник его не подключает: иконки
+   способностей вставали без рамок, таланты — сплошным текстом. */
+body.browse .skills { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 8px 10px; }
+
+body.browse .skill { position: relative; cursor: help; }
+
+body.browse .skill img {
+    display: block;
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--slot-bg);
+}
+
+body.browse .skill.ult img { border-color: var(--gold); }
+
+body.browse .skill .key {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 1px 0 2px;
+    border-radius: 0 0 7px 7px;
+    background: rgba(8, 11, 16, 0.82);
+    font-size: 9.5px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--muted);
+}
+
+body.browse .skill.ult .key { color: var(--gold); }
+
+body.browse .talents { display: flex; flex-direction: column; gap: 2px; padding: 4px 6px 10px; }
+
+body.browse .talent {
+    display: grid;
+    grid-template-columns: 28px 58px 1fr auto;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 7px;
+    font-size: 12.5px;
+}
+
+body.browse .talent:hover { background: rgba(255, 255, 255, 0.04); }
+
+body.browse .talent .lvl {
+    color: var(--gold);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Не «side»: так называется боковое меню окна, и его фон с отступами
+   ложился на подпись стороны чёрной плашкой. */
+body.browse .talent .tside {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--accent-lit);
+}
+
+body.browse .talent .tside.none { color: var(--faint); }
+body.browse .talent .what { color: var(--text); }
+body.browse .talent.stale .what { color: var(--faint); }
+body.browse .talent .stale-note { color: var(--faint); font-size: 10.5px; }
+
+/* ---------------- подсказка ---------------- */
+
+/* Без этого правила подсказка стояла обычным текстом внизу страницы. */
+.tip {
+    position: fixed;
+    z-index: 30;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    padding: 7px 10px;
+    border-radius: 8px;
+    background: #10141b;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.95);
+    font-size: 12px;
+    color: var(--text);
+    max-width: 300px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(3px);
+    transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s;
+}
+
+.tip.show { opacity: 1; visibility: visible; transform: translateY(0); }
+
+/* Страница предмета: та же шапка и то же стекло. */
+body.browse .guide-head { padding-bottom: 14px; }
+body.browse .guide-name { font-size: 24px; font-weight: 600; text-transform: none; }
+
+body.browse .card {
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.065);
+    background: rgba(255, 255, 255, 0.025);
+}
+
+
+/* Шапка карточки «кто берёт» — её оформление тоже было только в
+   panel.css: заголовок и пояснение слипались в одну строку. */
+body.browse .card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 13px 16px 6px;
+}
+
+body.browse .card-meta { font-size: 11px; color: var(--faint); }
+
+/* Таблица не прижата к краям: крайняя колонка упиралась в рамку. */
+body.browse .card-body { padding: 0 16px 10px; }
+
+body.browse .grid-row { border-bottom-color: rgba(255, 255, 255, 0.05); }
+body.browse .grid-name { font-size: 13px; }
+
+/* Список предметов: значок по форме иконки, число сборок в одну строку. */
+body.browse .pick-item {
+    width: 34px;
+    height: 25px;
+    border-radius: 5px;
+}
+
+body.browse .pick-tail { white-space: nowrap; font-size: 10.5px; }
+
+/* Контрпики стоят на стилях справочника (body.browse). Своё здесь одно:
+   список «чаще берут» — главное в строке, и обрезать его многоточием
+   нельзя, пусть переносится. */
+body.counters .line { align-items: flex-start; }
+body.counters .line-art { margin-top: 2px; }
+
+body.counters .line-role {
+    white-space: normal;
+    overflow: visible;
+}
+
+/* Вкладка «Сборка»: две колонки, каждая своей высоты. */
+body.browse .cols.stack { align-items: start; }
+
+body.browse .stack-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+/* Сверху окна лежит полоса перетаскивания (38px) — она перехватывала
+   нажатия, и переключатель «Герои / Предметы» срабатывал только у
+   нижнего края. Всё кликабельное в колонке списка — ниже полосы. */
+body.browse .roster-top { padding-top: 44px; }
+
+/* ------------------------------------------------------------------ */
+/* страница настроек                                                    */
+/* ------------------------------------------------------------------ */
+
+/* Тот же синеватый фон и то же стекло, что у справочника. */
+body.settings-page {
+    /* Ровный тёмный, как у меты: синий отсвет делал страницу светлее
+       остальных разделов. */
+    background: #0b0e13;
+    min-height: 100vh;
+}
+
+body.settings-page .sheet { padding: 34px 24px 26px; }
+
+body.settings-page .sheet-head h1 { font-size: 24px; font-weight: 600; }
+
+.set-cols {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: start;
+}
+
+.set-cols .stack-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+.set-card {
+    background: rgba(255, 255, 255, 0.025);
+    border-color: rgba(255, 255, 255, 0.065);
+}
+
+.set-card .col-head { padding: 13px 16px 4px; border-bottom: 0; align-items: center; }
+.set-card .col-title { font-size: 13.5px; font-weight: 600; }
+
+.set-body { padding: 4px 16px 14px; }
+
+/* Строка настройки: слева что это и зачем, справа сам переключатель. */
+.set-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: default;
+}
+
+.set-row:last-child { border-bottom: 0; }
+
+label.set-row { cursor: pointer; }
+
+.set-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.set-text b { font-size: 13px; font-weight: 500; color: var(--text); }
+.set-text small { font-size: 11.5px; line-height: 1.4; color: var(--faint); }
+
+.set-note {
+    margin-top: 10px;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--faint);
+}
+
+.set-note.warn { color: #ffb86b; }
+
+.set-buttons { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 12px; }
+
+.set-slider { padding: 10px 0 0; }
+.set-slider .slider { margin-bottom: 8px; }
+
+.set-link {
+    border: 0;
+    padding: 0;
+    background: none;
+    font-family: inherit;
+    font-size: 11.5px;
+    color: var(--accent);
+    cursor: pointer;
+}
+
+.set-link:hover { text-decoration: underline; }
+
+/* Переключатель вместо галочки: включено/выключено читается с первого
+   взгляда, а галочку в тёмном интерфейсе легко не заметить. */
+.toggle {
+    appearance: none;
+    position: relative;
+    flex: none;
+    width: 36px;
+    height: 20px;
+    margin: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.toggle::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #cfd6e0;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.toggle:checked { background: var(--accent); }
+.toggle:checked::after { transform: translateX(16px); background: #fff; }
+.toggle:focus-visible { outline: 2px solid var(--accent-lit); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+    .toggle,
+    .toggle::after { transition: none; }
+}
+
+/* Выбор из двух: обе кнопки на виду, выбранная залита. */
+.segmented {
+    display: inline-flex;
+    flex: none;
+    padding: 3px;
+    gap: 2px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.segmented button {
+    padding: 5px 10px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.segmented button:hover { color: var(--text); }
+.segmented button.on { background: var(--accent); color: #fff; }
+
+.set-select {
+    flex: none;
+    max-width: 58%;
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #141920;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.set-select:disabled { opacity: 0.6; cursor: default; }
+.set-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Сочетание клавиш — как надпись на клавише. */
+.keycap {
+    flex: none;
+    min-width: 96px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-bottom-width: 2px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+}
+
+.keycap:hover { background: rgba(255, 255, 255, 0.09); }
+
+.keycap.wait {
+    border-color: var(--accent);
+    background: rgba(76, 157, 255, 0.16);
+    color: var(--accent-lit);
+    font-weight: 500;
+}
+
+.btn.small { padding: 6px 11px; font-size: 11.5px; }
+
+.btn.danger:hover { color: #ffb0a6; border-color: rgba(255, 120, 100, 0.4); }
+.btn.danger.armed {
+    color: #fff;
+    border-color: transparent;
+    background: #c9453a;
+}
+
+/* ---------------- подключение ---------------- */
+
+.conn { margin-bottom: 12px; }
+
+.conn-rows {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 20px;
+    padding: 4px 16px 14px;
+}
+
+.conn-row {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 8px 0;
+}
+
+.conn-dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ff6b5b;
+    box-shadow: 0 0 0 3px rgba(255, 107, 91, 0.15);
+}
+
+.conn-row.ok .conn-dot {
+    background: var(--good);
+    box-shadow: 0 0 0 3px rgba(80, 200, 120, 0.15);
+}
+
+.conn-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.conn-text b { font-size: 13px; font-weight: 500; }
+
+.conn-text small {
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: var(--faint);
+    overflow-wrap: anywhere;
+}
+
+.conn-row .btn { flex: none; }

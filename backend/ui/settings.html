@@ -7,63 +7,201 @@
 <link rel="stylesheet" href="/base.css">
 <link rel="stylesheet" href="/windows.css">
 </head>
-<body class="page">
+<body class="page settings-page">
 
 <div class="sheet">
     <header class="sheet-head">
         <div>
             <h1>Настройки</h1>
-            <p>как выглядит и ведёт себя панель поверх игры</p>
+            <p>приложение, обновления и панель поверх игры</p>
         </div>
     </header>
 
-    <div class="opts">
-        <section class="col">
-            <div class="col-head">
-                <span class="col-title">Панель</span>
-                <span class="col-note">вид и поведение</span>
-            </div>
+    <!-- Подключение — первым и на всю ширину: без него приложение молчит,
+         и всё остальное на этой странице не имеет смысла. -->
+    <section class="col set-card conn" id="conn">
+        <div class="col-head">
+            <span class="col-title">Подключение к Dota 2</span>
+            <button class="set-link" id="conn-refresh" type="button">проверить ещё раз</button>
+        </div>
+        <div class="conn-rows" id="conn-rows">
+            <div class="set-note">проверяю…</div>
+        </div>
+    </section>
 
-            <div class="opt-body">
-                <label class="opt-row">
-                    <span>Прозрачность</span>
-                    <b id="opacity-value">100%</b>
-                </label>
-                <input class="slider" id="opacity" type="range" min="20" max="100" step="5">
+    <!-- Две независимые колонки: карточки разной высоты, и в сетке по
+         парам под короткими оставались дыры. -->
+    <div class="set-cols">
+        <div class="stack-col">
+            <section class="col set-card">
+                <div class="col-head"><span class="col-title">Запуск</span></div>
+                <div class="set-body">
+                    <label class="set-row">
+                        <span class="set-text">
+                            <b>Запускать вместе с Windows</b>
+                            <small>тихо, значком у часов — панель появится сама, когда начнётся матч</small>
+                        </span>
+                        <input class="toggle" type="checkbox" id="autostart">
+                    </label>
 
-                <label class="opt-row">
-                    <span>Размер</span>
-                    <b id="scale-value">100%</b>
-                </label>
-                <input class="slider" id="scale" type="range" min="70" max="200" step="5">
+                    <label class="set-row">
+                        <span class="set-text">
+                            <b>Открывать главное окно при запуске</b>
+                            <small>при запуске вместе с Windows не открывается никогда</small>
+                        </span>
+                        <input class="toggle" type="checkbox" data-option="open_window">
+                    </label>
 
-                <label class="switch">
-                    <input type="checkbox" id="only-match">
-                    <span>Показывать панель только в матче</span>
-                </label>
-
-                <div class="opt-note">
-                    Иначе панель висит на рабочем столе всё время, пока
-                    приложение запущено.
+                    <div class="set-row">
+                        <span class="set-text">
+                            <b>Крестик главного окна</b>
+                        </span>
+                        <span class="segmented" data-choice="close_to_tray">
+                            <button type="button" data-value="true">свернуть в трей</button>
+                            <button type="button" data-value="false">выход</button>
+                        </span>
+                    </div>
                 </div>
+            </section>
 
-                <div class="opt-buttons">
-                    <button class="btn" id="recenter" type="button">вернуть на экран</button>
-                    <button class="btn" id="hide" type="button">убрать панель</button>
+            <section class="col set-card">
+                <div class="col-head"><span class="col-title">Обновления</span></div>
+                <div class="set-body">
+                    <label class="set-row">
+                        <span class="set-text">
+                            <b>Скачивать свежие данные сами</b>
+                            <small>около 1.5 МБ, только вне матча; иначе — предложим на главной</small>
+                        </span>
+                        <input class="toggle" type="checkbox" data-option="auto_data">
+                    </label>
+
+                    <label class="set-row">
+                        <span class="set-text">
+                            <b>Искать новые версии программы</b>
+                            <small>ставится только по кнопке, само ничего не устанавливается</small>
+                        </span>
+                        <input class="toggle" type="checkbox" data-option="check_app">
+                    </label>
+
+                    <label class="set-row">
+                        <span class="set-text">
+                            <b>Уведомления у часов</b>
+                            <small>о свежих данных и новых версиях</small>
+                        </span>
+                        <input class="toggle" type="checkbox" data-option="notify">
+                    </label>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <section class="col">
-            <div class="col-head">
-                <span class="col-title">Что показывать</span>
-                <span class="col-note">блоки панели</span>
-            </div>
+            <section class="col set-card">
+                <div class="col-head"><span class="col-title">Подсказки</span></div>
+                <div class="set-body">
+                    <div class="set-row">
+                        <span class="set-text">
+                            <b>Роль по умолчанию</b>
+                            <small>в матче её всё равно можно сменить на панели</small>
+                        </span>
+                        <select class="set-select" id="default-position">
+                            <option value="">угадывать по составу</option>
+                            <option value="POSITION_1">1 · керри</option>
+                            <option value="POSITION_2">2 · мид</option>
+                            <option value="POSITION_3">3 · оффлейн</option>
+                            <option value="POSITION_4">4 · роумер</option>
+                            <option value="POSITION_5">5 · саппорт</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
 
-            <div class="opt-body">
-                <div class="blocks" id="blocks"></div>
-            </div>
-        </section>
+            <section class="col set-card">
+                <div class="col-head"><span class="col-title">Служебное</span></div>
+                <div class="set-body">
+                    <div class="set-buttons">
+                        <button class="btn" id="open-log" type="button">Открыть папку с журналом</button>
+                        <button class="btn danger" id="reset" type="button">Сбросить все настройки</button>
+                    </div>
+                    <div class="set-note">
+                        Сброс возвращает вид панели, горячие клавиши и всё на этой
+                        странице. Автозапуск остаётся как был.
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="stack-col">
+            <section class="col set-card">
+                <div class="col-head"><span class="col-title">Панель</span></div>
+                <div class="set-body">
+                    <div class="set-row">
+                        <span class="set-text"><b>Монитор</b></span>
+                        <select class="set-select" id="screen"></select>
+                    </div>
+
+                    <div class="set-slider">
+                        <div class="opt-row"><span>Прозрачность</span><b id="opacity-value">100%</b></div>
+                        <input class="slider" id="opacity" type="range" min="20" max="100" step="5">
+                    </div>
+
+                    <div class="set-slider">
+                        <div class="opt-row"><span>Размер</span><b id="scale-value">100%</b></div>
+                        <input class="slider" id="scale" type="range" min="70" max="200" step="5">
+                    </div>
+
+                    <label class="set-row">
+                        <span class="set-text">
+                            <b>Показывать только в матче</b>
+                            <small>иначе панель висит на рабочем столе всё время</small>
+                        </span>
+                        <input class="toggle" type="checkbox" id="only-match">
+                    </label>
+
+                    <label class="set-row">
+                        <span class="set-text"><b>Компактный вид при запуске</b></span>
+                        <input class="toggle" type="checkbox" data-option="start_compact">
+                    </label>
+
+                    <label class="set-row">
+                        <span class="set-text">
+                            <b>Клики сквозь панель при запуске</b>
+                            <small>мышь уходит в игру; вернуть — кнопкой над панелью</small>
+                        </span>
+                        <input class="toggle" type="checkbox" data-option="start_click_through">
+                    </label>
+
+                    <div class="set-buttons">
+                        <button class="btn" id="recenter" type="button">Вернуть на экран</button>
+                        <button class="btn" id="hide" type="button">Убрать панель</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="col set-card">
+                <div class="col-head"><span class="col-title">Горячие клавиши</span></div>
+                <div class="set-body">
+                    <div class="set-row">
+                        <span class="set-text"><b>Компактный вид панели</b></span>
+                        <button class="keycap" type="button" data-hotkey="compact"></button>
+                    </div>
+
+                    <div class="set-row">
+                        <span class="set-text"><b>Клики сквозь панель</b></span>
+                        <button class="keycap" type="button" data-hotkey="click_through"></button>
+                    </div>
+
+                    <div class="set-note" id="hotkey-note">
+                        Нажми на сочетание и затем новое: Ctrl, Alt или Shift с буквой
+                        или цифрой, либо F1–F12. Esc — отмена.
+                    </div>
+                </div>
+            </section>
+
+            <section class="col set-card">
+                <div class="col-head"><span class="col-title">Что показывать на панели</span></div>
+                <div class="set-body">
+                    <div class="blocks" id="blocks"></div>
+                </div>
+            </section>
+        </div>
     </div>
 </div>
 
@@ -104,6 +242,175 @@
         }());
     }
 
+    function option(key, value) {
+        tell("setOption", JSON.stringify({ key: key, value: value }));
+    }
+
+    function el(tag, cls, text) {
+        var node = document.createElement(tag);
+        if (cls) { node.className = cls; }
+        if (text !== undefined) { node.textContent = text; }
+        return node;
+    }
+
+    /* ---------------- подключение ---------------- */
+
+    var connRows = document.getElementById("conn-rows");
+
+    function connRow(ok, title, note, action) {
+        var row = el("div", "conn-row" + (ok ? " ok" : " bad"));
+
+        row.appendChild(el("i", "conn-dot"));
+
+        var text = el("div", "conn-text");
+        text.appendChild(el("b", null, title));
+
+        if (note) {
+            var small = el("small");
+            small.innerHTML = note;
+            text.appendChild(small);
+        }
+
+        row.appendChild(text);
+
+        if (action) { row.appendChild(action); }
+
+        return row;
+    }
+
+    function drawConn(now) {
+        connRows.innerHTML = "";
+
+        var install = (now.installs || [])[0];
+
+        connRows.appendChild(connRow(!!now.dota_found, "Dota 2",
+            now.dota_found
+                ? "найдена: " + (install ? install.game : "")
+                : "не найдена — игра должна стоять через Steam на этом компьютере"));
+
+        if (!now.dota_found) { return; }
+
+        var put = el("button", "btn small", now.config_ok ? "Поставить заново" : "Поставить конфиг");
+        put.type = "button";
+        put.addEventListener("click", function () {
+            put.disabled = true;
+            put.textContent = "кладу…";
+
+            fetch("/install-config", { method: "POST", body: "{}" })
+                .then(function (answer) { return answer.json(); })
+                .then(drawConn)
+                .catch(function (error) {
+                    console.error(error);
+                    put.disabled = false;
+                    put.textContent = "не вышло, ещё раз";
+                });
+        });
+
+        connRows.appendChild(connRow(now.config_ok, "Конфиг GSI",
+            now.config_ok
+                ? "лежит в папке игры"
+                : "без него игра не знает, куда слать состояние матча",
+            put));
+
+        var copy = el("button", "btn small", "Скопировать");
+        copy.type = "button";
+        // Копирует приложение: самой странице в рамке буфер обмена
+        // недоступен, и navigator.clipboard молча ничего не делал.
+        copy.addEventListener("click", function () {
+            tell("copyText", now.option);
+            copy.textContent = "Скопировано";
+        });
+
+        connRows.appendChild(connRow(now.launch_ok,
+            "Параметр запуска " + now.option,
+            (now.active_login ? "учётка " + now.active_login + ": " : "")
+                + (now.launch_ok
+                    ? "стоит в параметрах запуска Steam"
+                    : "нет — Steam → Библиотека → Dota 2 → Свойства → Параметры запуска: дописать и перезапустить игру"),
+            now.launch_ok ? null : copy));
+
+        connRows.appendChild(connRow(!!now.heard_game, "Данные от игры",
+            now.heard_game
+                ? "игра присылала данные — всё работает"
+                : "пока не приходили: запусти Доту, и строка загорится сама"));
+    }
+
+    function checkConn() {
+        fetch("/setup", { cache: "no-store" })
+            .then(function (answer) { return answer.json(); })
+            .then(drawConn)
+            .catch(function (error) {
+                console.error(error);
+                connRows.innerHTML = "";
+                connRows.appendChild(el("div", "set-note", "приложение не отвечает"));
+            });
+    }
+
+    document.getElementById("conn-refresh").addEventListener("click", checkConn);
+
+    checkConn();
+
+    /* Боковое меню просит показать подключение — оно и так сверху, но
+       проверим заново: человек пришёл именно за этим. */
+    window.__showSetup = function () {
+        window.scrollTo(0, 0);
+        checkConn();
+    };
+
+    /* ---------------- простые галочки и выбор ---------------- */
+
+    Array.prototype.forEach.call(
+        document.querySelectorAll("[data-option]"),
+        function (box) {
+            box.addEventListener("change", function () {
+                option(box.dataset.option, box.checked);
+            });
+        }
+    );
+
+    Array.prototype.forEach.call(
+        document.querySelectorAll("[data-choice]"),
+        function (group) {
+            Array.prototype.forEach.call(group.children, function (button) {
+                button.addEventListener("click", function () {
+                    setChoice(group, button.dataset.value);
+                    option(group.dataset.choice, button.dataset.value === "true");
+                });
+            });
+        }
+    );
+
+    function setChoice(group, value) {
+        Array.prototype.forEach.call(group.children, function (button) {
+            button.classList.toggle("on", button.dataset.value === value);
+        });
+    }
+
+    var autostartBox = document.getElementById("autostart");
+
+    autostartBox.addEventListener("change", function () {
+        bridged(function (bridge) {
+            // Галочка показывает то, что вышло в реестре, а не то, что нажали.
+            bridge.setAutostart(autostartBox.checked, function (done) {
+                autostartBox.checked = !!done;
+            });
+        });
+    });
+
+    var positionSelect = document.getElementById("default-position");
+
+    positionSelect.addEventListener("change", function () {
+        option("default_position", positionSelect.value);
+    });
+
+    var screenSelect = document.getElementById("screen");
+
+    screenSelect.addEventListener("change", function () {
+        option("panel_screen", screenSelect.value);
+    });
+
+    /* ---------------- панель ---------------- */
+
     var hidden = {};
 
     var opacity = document.getElementById("opacity");
@@ -112,10 +419,9 @@
     var blocks = document.getElementById("blocks");
 
     BLOCKS.forEach(function (pair) {
-        var label = document.createElement("label");
-        label.className = "switch";
+        var label = el("label", "switch");
 
-        var box = document.createElement("input");
+        var box = el("input");
         box.type = "checkbox";
         box.dataset.key = pair[0];
 
@@ -130,25 +436,18 @@
         });
 
         label.appendChild(box);
-
-        var text = document.createElement("span");
-        text.textContent = pair[1];
-        label.appendChild(text);
+        label.appendChild(el("span", null, pair[1]));
 
         blocks.appendChild(label);
     });
 
     opacity.addEventListener("input", function () {
-        document.getElementById("opacity-value").textContent =
-            opacity.value + "%";
-
+        document.getElementById("opacity-value").textContent = opacity.value + "%";
         tell("setOpacity", parseInt(opacity.value, 10));
     });
 
     scale.addEventListener("input", function () {
-        document.getElementById("scale-value").textContent =
-            scale.value + "%";
-
+        document.getElementById("scale-value").textContent = scale.value + "%";
         tell("setScale", parseInt(scale.value, 10));
     });
 
@@ -165,34 +464,217 @@
         tell("hidePanel");
     });
 
-    bridged(function (bridge) {
-        bridge.settings(function (raw) {
-            var saved;
+    /* ---------------- горячие клавиши ---------------- */
 
-            try { saved = JSON.parse(raw); } catch (error) { return; }
+    var hotkeyNote = document.getElementById("hotkey-note");
+    var HOTKEY_HELP = hotkeyNote.textContent;
+    var waiting = null;
 
-            opacity.value = saved.opacity || 100;
-            document.getElementById("opacity-value").textContent =
-                opacity.value + "%";
+    /* Клавиша по коду, а не по символу: на русской раскладке «D» — это
+       «В», а системе нужна именно физическая клавиша. */
+    function keyName(event) {
+        var code = event.code || "";
 
-            scale.value = Math.round((saved.scale || 1) * 100);
-            document.getElementById("scale-value").textContent =
-                scale.value + "%";
+        if (/^Key[A-Z]$/.test(code)) { return code.slice(3); }
+        if (/^Digit[0-9]$/.test(code)) { return code.slice(5); }
+        if (/^F([1-9]|1[0-2])$/.test(code)) { return code; }
 
-            onlyMatch.checked = saved.hide_without_dota !== false;
+        return null;
+    }
 
-            (saved.hidden || []).forEach(function (key) {
-                hidden[key] = true;
+    function stopWaiting() {
+        if (waiting) { waiting.classList.remove("wait"); }
+        waiting = null;
+    }
+
+    Array.prototype.forEach.call(
+        document.querySelectorAll("[data-hotkey]"),
+        function (button) {
+            button.addEventListener("click", function () {
+                stopWaiting();
+                waiting = button;
+                button.classList.add("wait");
+                button.dataset.was = button.textContent;
+                button.textContent = "нажми сочетание…";
             });
+        }
+    );
 
-            Array.prototype.forEach.call(
-                blocks.querySelectorAll("input"),
-                function (box) {
-                    box.checked = !hidden[box.dataset.key];
+    document.addEventListener("keydown", function (event) {
+        if (!waiting) { return; }
+
+        event.preventDefault();
+
+        if (event.key === "Escape") {
+            waiting.textContent = waiting.dataset.was;
+            stopWaiting();
+            return;
+        }
+
+        var key = keyName(event);
+
+        // Пока зажаты одни модификаторы — ждём клавишу.
+        if (!key) { return; }
+
+        var parts = [];
+        if (event.ctrlKey) { parts.push("Ctrl"); }
+        if (event.altKey) { parts.push("Alt"); }
+        if (event.shiftKey) { parts.push("Shift"); }
+
+        if (!parts.length && key.charAt(0) !== "F") {
+            hotkeyNote.textContent = "Одной буквы мало — добавь Ctrl, Alt или Shift.";
+            hotkeyNote.classList.add("warn");
+            return;
+        }
+
+        parts.push(key);
+
+        var combo = parts.join("+");
+        var button = waiting;
+        var action = button.dataset.hotkey;
+
+        stopWaiting();
+
+        bridged(function (bridge) {
+            bridge.setHotkey(action, combo, function (ok) {
+                if (!ok) {
+                    button.textContent = button.dataset.was;
+                    hotkeyNote.textContent = "Такое сочетание не подходит.";
+                    hotkeyNote.classList.add("warn");
+                    return;
                 }
-            );
+
+                button.textContent = combo;
+
+                // Занять сочетание Windows даёт не сразу — смотрим чуть позже.
+                setTimeout(function () {
+                    bridge.hotkeyTrouble(function (raw) {
+                        var failed = [];
+                        try { failed = JSON.parse(raw); } catch (error) {}
+
+                        if (failed.indexOf(action) >= 0) {
+                            hotkeyNote.textContent = combo
+                                + " уже занято другой программой — выбери другое.";
+                            hotkeyNote.classList.add("warn");
+                        } else {
+                            hotkeyNote.textContent = HOTKEY_HELP;
+                            hotkeyNote.classList.remove("warn");
+                        }
+                    });
+                }, 500);
+            });
         });
     });
+
+    /* ---------------- служебное ---------------- */
+
+    document.getElementById("open-log").addEventListener("click", function () {
+        tell("openLogFolder");
+    });
+
+    /* Сброс — со вторым нажатием: одно случайное касание не должно
+       стирать всё, что человек настраивал. */
+    var reset = document.getElementById("reset");
+    var armed = null;
+
+    reset.addEventListener("click", function () {
+        if (!armed) {
+            reset.textContent = "Точно сбросить?";
+            reset.classList.add("armed");
+            armed = setTimeout(function () {
+                armed = null;
+                reset.textContent = "Сбросить все настройки";
+                reset.classList.remove("armed");
+            }, 4000);
+            return;
+        }
+
+        clearTimeout(armed);
+        armed = null;
+        reset.textContent = "Сбросить все настройки";
+        reset.classList.remove("armed");
+
+        tell("resetSettings");
+
+        setTimeout(load, 400);
+    });
+
+    /* ---------------- загрузка ---------------- */
+
+    function load() {
+        bridged(function (bridge) {
+            bridge.settings(function (raw) {
+                var saved;
+
+                try { saved = JSON.parse(raw); } catch (error) { return; }
+
+                autostartBox.checked = !!saved.autostart;
+
+                Array.prototype.forEach.call(
+                    document.querySelectorAll("[data-option]"),
+                    function (box) {
+                        box.checked = saved[box.dataset.option] !== false
+                            && !!saved[box.dataset.option];
+                    }
+                );
+
+                setChoice(document.querySelector("[data-choice=close_to_tray]"),
+                    String(saved.close_to_tray !== false));
+
+                positionSelect.value = saved.default_position || "";
+
+                opacity.value = saved.opacity || 100;
+                document.getElementById("opacity-value").textContent = opacity.value + "%";
+
+                scale.value = Math.round((saved.scale || 1) * 100);
+                document.getElementById("scale-value").textContent = scale.value + "%";
+
+                onlyMatch.checked = saved.hide_without_dota !== false;
+
+                hidden = {};
+
+                (saved.hidden || []).forEach(function (key) { hidden[key] = true; });
+
+                Array.prototype.forEach.call(blocks.querySelectorAll("input"), function (box) {
+                    box.checked = !hidden[box.dataset.key];
+                });
+
+                var keys = saved.hotkeys || {};
+
+                Array.prototype.forEach.call(
+                    document.querySelectorAll("[data-hotkey]"),
+                    function (button) {
+                        button.textContent = keys[button.dataset.hotkey] || "—";
+                    }
+                );
+
+                bridge.screens(function (list) {
+                    var screens = [];
+                    try { screens = JSON.parse(list); } catch (error) {}
+
+                    screenSelect.innerHTML = "";
+
+                    screens.forEach(function (screen) {
+                        var item = el("option", null,
+                            screen.number + " · "
+                            + screen.width + "×" + screen.height
+                            + (screen.primary ? " · основной" : ""));
+                        item.value = screen.primary ? "" : screen.name;
+                        screenSelect.appendChild(item);
+                    });
+
+                    screenSelect.value = saved.panel_screen || "";
+
+                    // Сохранённого монитора сейчас нет — панель на основном.
+                    if (screenSelect.selectedIndex < 0) { screenSelect.value = ""; }
+
+                    screenSelect.disabled = screens.length < 2;
+                });
+            });
+        });
+    }
+
+    load();
 }());
 </script>
 </body>

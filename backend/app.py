@@ -21,6 +21,7 @@ from gsi.tracker import MatchTracker
 from services.fonts import font_files
 from config import USER_DIR
 from services import setup as setup_check
+from services import settings as settings_store
 from services import updates
 from services.snapshot import SNAPSHOT_PATH
 
@@ -80,6 +81,17 @@ LIVE_STAGES = {
 }
 
 
+def default_position():
+    """Роль из настроек, если игрок её задал; иначе — угадывать."""
+
+    chosen = settings_store.load().get("default_position") or None
+
+    return chosen if chosen in POSITIONS else None
+
+
+POSITIONS = {f"POSITION_{number}" for number in range(1, 6)}
+
+
 class Helper:
     def __init__(self):
         print("загружаю snapshot...")
@@ -94,7 +106,7 @@ class Helper:
         # Кого игрок вручную отметил как противника на своей линии.
         self.lane_override = []
         # Позиция, выбранная игроком вручную. Пока пусто — угадываем сами.
-        self.position_override = None
+        self.position_override = default_position()
 
         snapshot = self.engine.snapshot
 
@@ -130,10 +142,11 @@ class Helper:
 
             info = self.tracker.snapshot()
 
-            # Новая игра — ручной выбор из прошлой уже не про неё.
+            # Новая игра — ручной выбор из прошлой уже не про неё. Роль
+            # возвращается к той, что задана в настройках, или к догадке.
             if info["match_id"] != previous_match:
                 self.lane_override = []
-                self.position_override = None
+                self.position_override = default_position()
 
             # Матч кончился или игрок вернулся в меню — держать на экране
             # прошлую рекомендацию нельзя: в следующем матче она секунду
@@ -253,11 +266,12 @@ class Helper:
         return self.engine.recommend(hero, position=position)
 
     def items(self):
-        """Все предметы игры, а не только попавшие в гайды.
+        """Предметы, которые есть хотя бы в одной сборке.
 
-        Искать нужно любой предмет: ответ «его не берут почти нигде» —
-        это тоже ответ, и получить его игрок должен, а не гадать, почему
-        предмета нет в списке.
+        Раньше отдавали все предметы игры: ответ «его не берут почти
+        нигде» тоже казался ответом. На деле половина пустых строк —
+        удалённые из игры предметы, а остальные вроде Roshan's Banner
+        никто и не покупает. Список засоряли, открыть по ним было нечего.
         """
 
         snapshot = self.engine.snapshot
@@ -276,6 +290,7 @@ class Helper:
                     }
                     for value in snapshot["items"].values()
                     if not value["name"].startswith("item_recipe_")
+                    and seen.get(value["name"])
                 ),
                 key=lambda entry: entry["display"],
             ),
@@ -291,6 +306,11 @@ class Helper:
         """Есть ли что-то новее: данные или сама программа."""
 
         found = updates.check(force=force)
+
+        # Проверку версий выключили — не показываем и плашку о них. Кнопка
+        # «проверить обновления» (force) спрашивает явно, ей отвечаем.
+        if not force and not settings_store.load().get("check_app", True):
+            found = {key: value for key, value in found.items() if key != "app"}
 
         snapshot = self.engine.snapshot
 
@@ -350,7 +370,9 @@ class Helper:
                 return
 
             has_data = bool((found.get("data") or {}).get("newer"))
-            has_app = bool(found.get("app"))
+            has_app = bool(found.get("app")) and settings_store.load().get(
+                "check_app", True
+            )
 
             if (has_data or has_app) and on_found:
                 on_found(found)
@@ -798,6 +820,12 @@ class Handler(BaseHTTPRequestHandler):
         # Предметы лежат без приставки item_, а гайды её несут.
         if kind == "items" and name.startswith("item_"):
             name = name[len("item_"):]
+
+        # У рецептов своих иконок нет — показываем то, что из них
+        # собирается. Иначе в стартовой закупке пустая рамка.
+        if kind == "items" and name.startswith("recipe_"):
+            if not (ICONS_DIR / kind / name).exists():
+                name = name[len("recipe_"):]
 
         self.send_file(ICONS_DIR / kind / name, "image/png")
 

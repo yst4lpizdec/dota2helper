@@ -247,6 +247,82 @@ def install_config(port=3000):
     return written
 
 
+STEAM_ID_BASE = 76561197960265728
+
+
+def _login_names(root):
+    """Номер учётки → логин, из loginusers.vdf: чтобы назвать учётку словами."""
+
+    names = {}
+    auto = None
+
+    try:
+        text = (root / "config" / "loginusers.vdf").read_text(
+            encoding="utf-8", errors="ignore"
+        )
+
+    except OSError:
+        return names
+
+    for match in re.finditer(r'"(7656\d+)"\s*\{([^}]*)\}', text):
+        login = re.search(r'"AccountName"\s*"([^"]*)"', match.group(2))
+
+        if login:
+            names[str(int(match.group(1)) - STEAM_ID_BASE)] = login.group(1)
+
+    return names
+
+
+def active_account():
+    """Под какой учёткой Steam сейчас — номер папки в userdata.
+
+    Пока Steam запущен, он сам пишет её в реестр (ActiveUser). Выключен —
+    берём ту, под которой он входит автоматически. Раньше проверка
+    довольствовалась любой учёткой с параметром, и зелёный горел, даже
+    когда играли под той, где его нет.
+    """
+
+    if sys.platform != "win32":
+        return None
+
+    try:
+        import winreg
+
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam\ActiveProcess"
+        ) as key:
+            active = winreg.QueryValueEx(key, "ActiveUser")[0]
+
+        if active:
+            return str(active)
+
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam") as key:
+            login = winreg.QueryValueEx(key, "AutoLoginUser")[0]
+
+    except (ImportError, OSError):
+        return None
+
+    root = steam_root()
+
+    if root is None or not login:
+        return None
+
+    for number, name in _login_names(root).items():
+        if name.lower() == str(login).lower():
+            return number
+
+    return None
+
+
+def active_login(number):
+    root = steam_root()
+
+    if number is None or root is None:
+        return None
+
+    return _login_names(root).get(number)
+
+
 def launch_options():
     """Параметры запуска Доты у каждой учётки Steam на этом компьютере.
 
@@ -261,6 +337,7 @@ def launch_options():
         return []
 
     accounts = []
+    names = _login_names(root)
 
     userdata = root / "userdata"
 
@@ -300,6 +377,7 @@ def launch_options():
         accounts.append(
             {
                 "account": folder.name,
+                "login": names.get(folder.name),
                 "options": options,
                 "ok": LAUNCH_OPTION in options.lower(),
                 "modified": config.stat().st_mtime,
@@ -317,9 +395,20 @@ def report(port=3000, heard_game=False):
 
     config_ok = any(item["installed"] and item["port_ok"] for item in installs)
 
-    # Достаточно одной учётки с параметром: играют под какой-то одной, и
-    # какой именно — мы не знаем.
-    launch_ok = any(item["ok"] for item in accounts)
+    # Смотрим учётку, под которой сейчас Steam. Не знаем её — тогда
+    # хватает любой с параметром, как раньше.
+    active = active_account()
+    current = next(
+        (item for item in accounts if item["account"] == active), None
+    )
+
+    if current is not None:
+        launch_ok = current["ok"]
+    elif active is not None:
+        # Под этой учёткой Доту не настраивали вовсе — параметра нет.
+        launch_ok = False
+    else:
+        launch_ok = any(item["ok"] for item in accounts)
 
     return {
         "dota_found": bool(installs),
@@ -327,6 +416,8 @@ def report(port=3000, heard_game=False):
         "config_ok": config_ok,
         "accounts": accounts,
         "launch_ok": launch_ok,
+        # Логин учётки, которую проверяли: экран называет её словами.
+        "active_login": active_login(active),
         # Пакеты от игры — доказательство сильнее любой проверки файлов.
         "heard_game": bool(heard_game),
         "option": LAUNCH_OPTION,
