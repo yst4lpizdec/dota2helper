@@ -339,6 +339,11 @@ class Engine:
 
         slots = self.slot_map(hero, "talents")
 
+        # Гайды нового вида хранят, сколько игроков взяли каждый талант,
+        # без уровня. Старые snapshot'ы — «что взяли N-м по счёту».
+        if entries and "picked" in entries[0]:
+            return self._talents_by_tree(slots, entries)
+
         # Слоты, а не ключи: в карте у каждого таланта их два —
         # техническое имя и отображаемое.
         full_tree = len(set(slots.values())) >= TALENT_SLOTS
@@ -393,6 +398,57 @@ class Engine:
             list(best.values()) + stale,
             key=lambda item: (item.get("level") or 99, item["slot"] is None),
         )
+
+    def _talents_by_tree(self, slots, entries):
+        """Раскладывает таланты по дереву и выбирает в каждой паре.
+
+        Доля — внутри пары: из тех, кто взял на этом уровне один из двух,
+        сколько взяли этот. Талант, которого в дереве нет, — из старого
+        патча, и на место в нём не претендует.
+        """
+
+        pairs = {}
+
+        for entry in entries:
+            slot = slots.get(entry["talent"])
+
+            if slot is None:
+                continue
+
+            pair = pairs.setdefault(slot // 2, {})
+
+            # В карте у таланта два ключа — техническое имя и отображаемое;
+            # один и тот же слот не считаем дважды.
+            pair.setdefault(slot, entry)
+
+        result = []
+
+        for index in sorted(pairs):
+            pair = pairs[index]
+            slot, best = max(pair.items(), key=lambda item: item[1]["picked"])
+            total = sum(entry["picked"] for entry in pair.values())
+
+            result.append(
+                {
+                    "talent": best["talent"],
+                    "level": 10 + 5 * index,
+                    "display": self.ability_display.get(
+                        best["talent"], best["talent"]
+                    ),
+                    "slot": slot,
+                    "side": "правый" if slot % 2 == 0 else "левый",
+                    # Второго таланта пары в матчах нет вовсе — у Abaddon,
+                    # например, STRATZ не отдаёт «-Ns Borrowed Time
+                    # Cooldown». Тогда «100%» было бы враньём: сравнивать
+                    # не с чем, и доли не пишем.
+                    "share": round(best["picked"] / total * 100, 1)
+                    if total and len(pair) > 1 else None,
+                    "winrate": best["winrate"],
+                    "stale": False,
+                }
+            )
+
+        return result
 
     def start_budget(self, gold, owned):
         """Бюджет старта: золото на руках плюс то, что уже куплено.

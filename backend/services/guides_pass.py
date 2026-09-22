@@ -77,7 +77,7 @@ class Accumulator:
         self.start_sets = {}
         # уровень -> способность -> [взятий, побед]
         self.skills = {}
-        # слот таланта -> талант -> [взятий, побед]
+        # талант -> [взятий, побед], без порядка взятия
         self.talents = {}
         self.neutrals = {}
 
@@ -290,7 +290,7 @@ def build_all(progress=True, limit=None, current=None):
             )
 
         _accumulate_order(abilities, slot_key, buckets, wins, mass, "skills", 10)
-        _accumulate_order(talents, slot_key, buckets, wins, mass, "talents", 4)
+        _accumulate_picks(talents, slot_key, buckets, wins, mass, "talents")
 
         done += len(batch)
 
@@ -327,6 +327,33 @@ def _accumulate_order(rows, slot_key, buckets, wins, mass, field, limit):
 
         store = getattr(buckets[target], field)
         entry = store.setdefault(order, {}).setdefault(row["name"], [0, 0])
+
+        entry[0] += mass.get(key, 0)
+        entry[1] += wins.get(key, 0)
+
+
+def _accumulate_picks(rows, slot_key, buckets, wins, mass, field):
+    """Сколько игроков взяли каждый талант — неважно, каким по счёту.
+
+    По порядку взятия считать нельзя: кто берёт талант 10-го уровня
+    последним, сдвигает всю картину. У Abaddon на оффлейне четвёртым
+    по счёту чаще всего шёл талант 10-го уровня, и что берут на 15-м,
+    в гайд не попадало вовсе. Уровень и сторону потом ставит дерево.
+    """
+
+    seen = set()
+
+    for row in rows:
+        key = (row["match_id"], row["player_slot"])
+        target = slot_key.get(key)
+
+        if target is None or (key, row["name"]) in seen:
+            continue
+
+        seen.add((key, row["name"]))
+
+        store = getattr(buckets[target], field)
+        entry = store.setdefault(row["name"], [0, 0])
 
         entry[0] += mass.get(key, 0)
         entry[1] += wins.get(key, 0)
@@ -465,21 +492,20 @@ def _store(buckets, names, costs=None):
             if top
         ]
 
-        talent_levels = {1: 10, 2: 15, 3: 20, 4: 25}
-
-        guide["talents"] = [
-            {
-                "level": talent_levels[slot],
-                "talent": top["name"],
-                "share": top["share"],
-                "winrate": top["winrate"],
-            }
-            for slot, top in (
-                (slot, _top(bucket.talents.get(slot, {})))
-                for slot in sorted(bucket.talents)
-            )
-            if top and slot in talent_levels
-        ]
+        # Все взятые таланты, без уровня: его и сторону ставит движок по
+        # дереву героя, а там же сравнивает таланты внутри пары.
+        guide["talents"] = sorted(
+            (
+                {
+                    "talent": name,
+                    "picked": round(taken / bucket.total * 100, 1),
+                    "winrate": round(won / taken * 100, 1),
+                }
+                for name, (taken, won) in bucket.talents.items()
+                if taken
+            ),
+            key=lambda entry: -entry["picked"],
+        )
 
         if bucket.neutrals:
             best = max(bucket.neutrals, key=bucket.neutrals.get)
