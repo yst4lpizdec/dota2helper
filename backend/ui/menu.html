@@ -25,16 +25,31 @@
         <div class="side-foot">
             <!-- Короткая сводка: она нужна в любом разделе, а не только
                  на главной. -->
-            <div class="side-state" id="side-state"></div>
+            <!-- Нажатие открывает проверку подключения: раньше для
+                 этого была отдельная ссылка на главной, но состояние и
+                 так показано здесь. -->
+            <button class="side-state" id="side-state" type="button"></button>
 
             <div class="side-links">
-                <button class="side-link" id="opts" type="button">Настройки</button>
                 <button class="side-link quit" id="quit" type="button">Выход</button>
             </div>
         </div>
     </nav>
 
     <main class="stage">
+        <!-- Своя полоса заголовка: системной рамки у окна нет. За неё же
+             окно и перетаскивают — иначе двигать его было бы нечем. -->
+        <div class="titlebar" id="titlebar">
+            <div class="win-buttons">
+                <button class="win-btn" id="win-min" type="button" title="свернуть">
+                    <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                </button>
+                <button class="win-btn close" id="win-close" type="button" title="закрыть окно">
+                    <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.2 3.2 8.8 8.8M8.8 3.2 3.2 8.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+        </div>
+
         <iframe class="frame" id="frame" title="раздел"></iframe>
     </main>
 </div>
@@ -52,7 +67,9 @@
         ["meta", "Мета", "/meta",
          "M4 19h16M7 16V9.5M12 16V5M17 16v-4.5"],
         ["counters", "Контрпики", "/counters",
-         "M5.5 5.5 18 18M18 5.5 5.5 18"]
+         "M5.5 5.5 18 18M18 5.5 5.5 18"],
+        ["settings", "Настройки", "/settings",
+         "M12 8.9a3.1 3.1 0 1 0 0 6.2 3.1 3.1 0 0 0 0-6.2M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"]
     ];
 
     var frame = document.getElementById("frame");
@@ -127,12 +144,50 @@
         document.head.appendChild(script);
     }
 
-    document.getElementById("opts").addEventListener("click", function () {
-        window.__tell("openSettings");
-    });
-
     document.getElementById("quit").addEventListener("click", function () {
         window.__tell("quit");
+    });
+
+    /* ---------------- своя рамка окна ---------------- */
+
+    var titlebar = document.getElementById("titlebar");
+
+    /* Перетаскивание: страница ловит мышь и шлёт смещение приложению —
+       двигать окно умеет только оно. */
+    var dragging = false;
+    var lastX = 0;
+    var lastY = 0;
+
+    titlebar.addEventListener("mousedown", function (event) {
+        if (event.button !== 0 || event.target.closest(".win-btn")) { return; }
+
+        dragging = true;
+        lastX = event.screenX;
+        lastY = event.screenY;
+
+        event.preventDefault();
+    });
+
+    window.addEventListener("mousemove", function (event) {
+        if (!dragging) { return; }
+
+        var dx = event.screenX - lastX;
+        var dy = event.screenY - lastY;
+
+        lastX = event.screenX;
+        lastY = event.screenY;
+
+        if (dx || dy) { window.__tell("windowDrag", JSON.stringify([dx, dy])); }
+    });
+
+    window.addEventListener("mouseup", function () { dragging = false; });
+
+    document.getElementById("win-min").addEventListener("click", function () {
+        window.__tell("windowMinimize");
+    });
+
+    document.getElementById("win-close").addEventListener("click", function () {
+        window.__tell("windowClose");
     });
 
     /* ---------------- состояние в подвале ---------------- */
@@ -146,6 +201,14 @@
 
         return row;
     }
+
+    side.addEventListener("click", function () {
+        open("home");
+
+        var page = frame.contentWindow;
+
+        if (page && page.__showSetup) { page.__showSetup(); }
+    });
 
     function refresh() {
         if (!bridge || !bridge.status) { return; }

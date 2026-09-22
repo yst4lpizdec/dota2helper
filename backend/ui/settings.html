@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Dota2Helper — настройки</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/windows.css">
+</head>
+<body class="page">
+
+<div class="sheet">
+    <header class="sheet-head">
+        <div>
+            <h1>Настройки</h1>
+            <p>как выглядит и ведёт себя панель поверх игры</p>
+        </div>
+    </header>
+
+    <div class="opts">
+        <section class="col">
+            <div class="col-head">
+                <span class="col-title">Панель</span>
+                <span class="col-note">вид и поведение</span>
+            </div>
+
+            <div class="opt-body">
+                <label class="opt-row">
+                    <span>Прозрачность</span>
+                    <b id="opacity-value">100%</b>
+                </label>
+                <input class="slider" id="opacity" type="range" min="20" max="100" step="5">
+
+                <label class="opt-row">
+                    <span>Размер</span>
+                    <b id="scale-value">100%</b>
+                </label>
+                <input class="slider" id="scale" type="range" min="70" max="200" step="5">
+
+                <label class="switch">
+                    <input type="checkbox" id="only-match">
+                    <span>Показывать панель только в матче</span>
+                </label>
+
+                <div class="opt-note">
+                    Иначе панель висит на рабочем столе всё время, пока
+                    приложение запущено.
+                </div>
+
+                <div class="opt-buttons">
+                    <button class="btn" id="recenter" type="button">вернуть на экран</button>
+                    <button class="btn" id="hide" type="button">убрать панель</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="col">
+            <div class="col-head">
+                <span class="col-title">Что показывать</span>
+                <span class="col-note">блоки панели</span>
+            </div>
+
+            <div class="opt-body">
+                <div class="blocks" id="blocks"></div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    /* Те же ключи, что у блоков самой панели: она помечает ими свои
+       разделы, а сюда приходит только список выключенных. */
+    var BLOCKS = [
+        ["enemies", "враги"],
+        ["now", "брать сейчас"],
+        ["starting", "старт"],
+        ["phase", "ранняя и кор"],
+        ["consumables", "расходники"],
+        ["unusual", "ситуативно"],
+        ["situational", "против пика"],
+        ["skills", "прокачка"],
+        ["talents", "таланты"],
+        ["footer", "подписи внизу"]
+    ];
+
+    function tell(method, arg) {
+        if (window.parent && window.parent.__tell) {
+            window.parent.__tell(method, arg);
+        }
+    }
+
+    function bridged(run) {
+        var tries = 40;
+
+        (function wait() {
+            var bridge = window.parent && window.parent.__bridge;
+
+            if (bridge) { run(bridge); return; }
+
+            if (tries-- > 0) { setTimeout(wait, 150); }
+        }());
+    }
+
+    var hidden = {};
+
+    var opacity = document.getElementById("opacity");
+    var scale = document.getElementById("scale");
+    var onlyMatch = document.getElementById("only-match");
+    var blocks = document.getElementById("blocks");
+
+    BLOCKS.forEach(function (pair) {
+        var label = document.createElement("label");
+        label.className = "switch";
+
+        var box = document.createElement("input");
+        box.type = "checkbox";
+        box.dataset.key = pair[0];
+
+        box.addEventListener("change", function () {
+            hidden[pair[0]] = !box.checked;
+
+            tell("setHidden", JSON.stringify(
+                Object.keys(hidden).filter(function (key) {
+                    return hidden[key];
+                })
+            ));
+        });
+
+        label.appendChild(box);
+
+        var text = document.createElement("span");
+        text.textContent = pair[1];
+        label.appendChild(text);
+
+        blocks.appendChild(label);
+    });
+
+    opacity.addEventListener("input", function () {
+        document.getElementById("opacity-value").textContent =
+            opacity.value + "%";
+
+        tell("setOpacity", parseInt(opacity.value, 10));
+    });
+
+    scale.addEventListener("input", function () {
+        document.getElementById("scale-value").textContent =
+            scale.value + "%";
+
+        tell("setScale", parseInt(scale.value, 10));
+    });
+
+    onlyMatch.addEventListener("change", function () {
+        tell("setHideWithoutDota", onlyMatch.checked);
+    });
+
+    document.getElementById("recenter").addEventListener("click", function () {
+        tell("resetPosition");
+        tell("showOverlay");
+    });
+
+    document.getElementById("hide").addEventListener("click", function () {
+        tell("hidePanel");
+    });
+
+    bridged(function (bridge) {
+        bridge.settings(function (raw) {
+            var saved;
+
+            try { saved = JSON.parse(raw); } catch (error) { return; }
+
+            opacity.value = saved.opacity || 100;
+            document.getElementById("opacity-value").textContent =
+                opacity.value + "%";
+
+            scale.value = Math.round((saved.scale || 1) * 100);
+            document.getElementById("scale-value").textContent =
+                scale.value + "%";
+
+            onlyMatch.checked = saved.hide_without_dota !== false;
+
+            (saved.hidden || []).forEach(function (key) {
+                hidden[key] = true;
+            });
+
+            Array.prototype.forEach.call(
+                blocks.querySelectorAll("input"),
+                function (box) {
+                    box.checked = !hidden[box.dataset.key];
+                }
+            );
+        });
+    });
+}());
+</script>
+</body>
+</html>

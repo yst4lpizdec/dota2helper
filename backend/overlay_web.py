@@ -191,7 +191,8 @@ class Page(QWidget):
     содержимого ровно на один экран.
     """
 
-    def __init__(self, title, url, size, channel=None, fixed=False):
+    def __init__(self, title, url, size, channel=None, fixed=False,
+                 frameless=False):
         super().__init__()
 
         self.setWindowTitle(title)
@@ -199,6 +200,41 @@ class Page(QWidget):
 
         if fixed:
             self.setFixedSize(*size)
+
+        if frameless:
+            # Своя рамка: заголовок и кнопки рисует сама страница.
+            # Растягивать окно всё равно нельзя, поэтому ни рамки для
+            # изменения размера, ни системных кнопок не нужно.
+            self.setWindowFlags(
+                Qt.Window | Qt.FramelessWindowHint | Qt.MSWindowsFixedSizeDialogHint
+            )
+
+            self.round_corners()
+
+    def round_corners(self):
+        """Просит Windows скруглить углы окна.
+
+        Безрамочные окна получаются с прямыми углами, и рядом с обычными
+        окнами системы это выглядит чужеродно. Скругление умеет сам
+        менеджер окон — начиная с Windows 11.
+        """
+
+        if sys.platform != "win32":
+            return
+
+        try:
+            import ctypes
+
+            # DWMWA_WINDOW_CORNER_PREFERENCE = 33, DWMWCP_ROUND = 2
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                int(self.winId()),
+                33,
+                ctypes.byref(ctypes.c_int(2)),
+                ctypes.sizeof(ctypes.c_int),
+            )
+
+        except (OSError, AttributeError):
+            pass
 
         # Значок приложения задан на всё приложение сразу, но окну его
         # лучше поставить и отдельно: так он точно доживает до панели
@@ -409,6 +445,37 @@ class Bridge(QObject):
     def setPosition(self, position):
         # Пустая строка — «снова угадывай сам».
         self.window.tell_app("/position", {"position": position or None})
+
+    @Slot(str)
+    def windowDrag(self, delta):
+        """Окно двигает страница: своей рамки у него больше нет."""
+
+        try:
+            dx, dy = json.loads(delta)
+
+        except (ValueError, TypeError):
+            return
+
+        window = self.window.menu
+
+        if window is not None:
+            window.move(window.x() + int(dx), window.y() + int(dy))
+
+    @Slot()
+    def windowMinimize(self):
+        if self.window.menu is not None:
+            self.window.menu.showMinimized()
+
+    @Slot()
+    def windowClose(self):
+        """Закрыть главное окно — не выйти из программы.
+
+        Панель может идти дальше поверх игры, и значок у часов остаётся:
+        закрытие окна не должно уносить с собой приложение.
+        """
+
+        if self.window.menu is not None:
+            self.window.menu.hide()
 
     @Slot()
     def hidePanel(self):
@@ -669,7 +736,8 @@ class Overlay(QWidget):
         if self.menu is None:
             # Мост тот же самый: меню умеет всё то же, что и панель.
             self.menu = Page(
-                "Dota2Helper", MENU_URL, MENU_SIZE, self.channel, fixed=True
+                "Dota2Helper", MENU_URL, MENU_SIZE, self.channel,
+                fixed=True, frameless=True
             )
 
         self.menu.reopen()

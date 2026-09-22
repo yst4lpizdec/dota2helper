@@ -1351,3 +1351,150 @@ body.home-page .status {
 /* Карточка «о приложении» стоит рядом — её сетка была рассчитана на всю
    ширину окна. */
 .two-up .about-grid { grid-template-columns: 1fr; gap: 7px; }
+
+/* ------------------------------------------------------------------ */
+/* раскладка главной по высоте                                          */
+/* ------------------------------------------------------------------ */
+
+/* Страница занимает окно целиком, а карточки прижаты к низу: пока матча
+   нет, между приветствием и ними остаётся воздух, а не обрыв с
+   разделительной чертой посреди пустоты. */
+body.home-page .home {
+    min-height: 100vh;
+    padding-bottom: 22px;
+}
+
+body.home-page .two-up { margin-top: auto; }
+
+/* Карточка матча встаёт над ними и тоже прижата к низу. */
+body.home-page .live { margin-top: auto; }
+/* Скрытый блок всё равно остаётся соседом в разметке, поэтому уточняем:
+   отступ нужен, только когда карточка матча на экране. Без этого она
+   перебивала прижатие к низу и карточки висели посреди окна. */
+body.home-page .live:not([hidden]) + .two-up { margin-top: 12px; }
+
+/* Состояние в подвале меню — кнопка: по нажатию открывается проверка
+   подключения. */
+.side-state {
+    width: 100%;
+    border: 0;
+    padding: 6px 0;
+    border-radius: 8px;
+    background: none;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.side-state:hover { background: rgba(255, 255, 255, 0.04); }
+
+/* ------------------------------------------------------------------ */
+/* страница настроек                                                    */
+/* ------------------------------------------------------------------ */
+
+.opts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: start;
+}
+
+.opt-body { padding: 14px 16px 16px; }
+
+.opt-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.opt-row b {
+    font-size: 12px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+
+.slider {
+    width: 100%;
+    margin: 0 0 16px;
+    accent-color: var(--accent);
+}
+
+.opt-note {
+    margin: 6px 0 14px;
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--faint);
+}
+
+.opt-buttons { display: flex; gap: 8px; }
+
+/* Галочки блоков — в два столбца: их десять, в один они растягивают
+   карточку вдвое выше соседней. */
+.blocks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px 14px;
+}
+
+.page .switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.page .switch input { accent-color: var(--accent); }
+
+/* ------------------------------------------------------------------ */
+/* своя рамка окна                                                      */
+/* ------------------------------------------------------------------ */
+
+.stage { position: relative; }
+
+/* Полоса лежит поверх страницы раздела, а не над ней: у главной под
+   ней картинка, и белая перекладина разрезала бы её пополам. */
+.titlebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 38px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 8px;
+    -webkit-app-region: drag;
+}
+
+.win-buttons { display: flex; gap: 2px; }
+
+.win-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 26px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--faint);
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.win-btn svg { width: 12px; height: 12px; }
+
+.win-btn:hover { background: rgba(255, 255, 255, 0.08); color: var(--text); }
+
+.win-btn.close:hover { background: #d2453b; color: #fff; }
+
+/* Разделам нужно место под полосой, иначе кнопки лягут на содержимое. */
+body.page .sheet { padding-top: 34px; }
+body.home-page .hero-banner { padding-top: 40px; }
+body.browse .top { padding-right: 84px; }

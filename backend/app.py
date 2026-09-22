@@ -535,6 +535,13 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split("?", 1)[0]
 
+        if path in ("/settings", "/settings.html"):
+            self.send_file(
+                UI_DIR / "settings.html", "text/html; charset=utf-8"
+            )
+
+            return
+
         if path in ("/meta", "/meta.html"):
             self.send_file(UI_DIR / "meta.html", "text/html; charset=utf-8")
 
