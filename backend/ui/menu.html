@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Dota2Helper</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/app-icon.png">
+</head>
+<body class="menu">
+
+<div class="home">
+    <header class="home-head">
+        <div>
+            <div class="home-name">Dota2Helper</div>
+            <div class="home-sub" id="sub">загружаю…</div>
+        </div>
+    </header>
+
+    <!-- Пока Дота не настроена отдавать данные, приложение молчит и
+         выглядит сломанным. Поэтому первое, что видит человек, — чего
+         не хватает и что с этим сделать. Когда всё на месте, карточки
+         тут нет вовсе. -->
+    <section class="setup" id="setup" hidden></section>
+
+    <!-- Что происходит прямо сейчас. Без этого непонятно, почему панель
+         не показывается: игра не запущена или приложение не слышит её. -->
+    <div class="state" id="state"></div>
+
+    <div class="tiles">
+        <button class="tile wide" id="play" type="button">
+            <span class="tile-name">Запустить Dota 2</span>
+            <span class="tile-note">через Steam</span>
+        </button>
+
+        <button class="tile" id="browse" type="button">
+            <span class="tile-name">Справочник</span>
+            <span class="tile-note">герои, предметы, проценты</span>
+        </button>
+
+        <button class="tile" id="overlay" type="button">
+            <span class="tile-name">Показать панель</span>
+            <span class="tile-note">поверх игры</span>
+        </button>
+
+        <button class="tile" id="opts" type="button">
+            <span class="tile-name">Настройки</span>
+            <span class="tile-note">прозрачность, размер, что показывать</span>
+        </button>
+
+        <button class="tile quit" id="quit" type="button">
+            <span class="tile-name">Выход</span>
+            <span class="tile-note">закрыть приложение целиком</span>
+        </button>
+    </div>
+
+    <footer class="home-foot" id="foot"></footer>
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    /* Число матчей читается только с разрядами. */
+    function count(value) {
+        return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    }
+
+    /* Номер версии у STRATZ внутренний и путается с патчем Доты —
+       показываем дату сбора данных. */
+    function when(stamp) {
+        if (!stamp) { return "неизвестно"; }
+
+        return new Date(stamp * 1000).toLocaleDateString("ru-RU", {
+            day: "numeric", month: "long", year: "numeric"
+        });
+    }
+
+    var bridge = null;
+
+    function tell(method, arg) {
+        if (!bridge || !bridge[method]) { return; }
+        if (arg === undefined) { bridge[method](); } else { bridge[method](arg); }
+    }
+
+    function connect(done) {
+        if (!window.qt || !window.qt.webChannelTransport) { done(false); return; }
+
+        var script = document.createElement("script");
+        script.src = "qrc:///qtwebchannel/qwebchannel.js";
+        script.onload = function () {
+            new QWebChannel(window.qt.webChannelTransport, function (channel) {
+                bridge = channel.objects.app;
+                done(true);
+            });
+        };
+        script.onerror = function () { done(false); };
+        document.head.appendChild(script);
+    }
+
+    document.getElementById("play").addEventListener("click", function () {
+        tell("launchDota");
+    });
+
+    document.getElementById("browse").addEventListener("click", function () {
+        tell("openBrowser");
+    });
+
+    document.getElementById("overlay").addEventListener("click", function () {
+        tell("showOverlay");
+    });
+
+    document.getElementById("opts").addEventListener("click", function () {
+        tell("openSettings");
+    });
+
+    document.getElementById("quit").addEventListener("click", function () {
+        tell("quit");
+    });
+
+    /* ---------------- готова ли Дота отдавать данные ---------------- */
+
+    var setupBox = document.getElementById("setup");
+
+    function step(ok, title, body) {
+        var row = document.createElement("div");
+        row.className = "setup-step" + (ok ? " ok" : "");
+
+        var mark = document.createElement("span");
+        mark.className = "setup-mark";
+        mark.textContent = ok ? "✓" : "!";
+        row.appendChild(mark);
+
+        var text = document.createElement("div");
+
+        var head = document.createElement("div");
+        head.className = "setup-step-name";
+        head.textContent = title;
+        text.appendChild(head);
+
+        if (body) {
+            var note = document.createElement("div");
+            note.className = "setup-step-note";
+            note.innerHTML = body;
+            text.appendChild(note);
+        }
+
+        row.appendChild(text);
+
+        // Дальше в шаг иногда дописывают кнопку и мелкие строки. Класть
+        // их надо в текстовую колонку, а не в саму строку: строка — это
+        // «значок слева, текст справа», и всё, что попадало в неё
+        // напрямую, вставало третьей колонкой сбоку.
+        row.body = text;
+
+        return row;
+    }
+
+    function drawSetup(now) {
+        /* Пакеты от игры доказывают, что всё работает, лучше любой
+           проверки файлов: если они идут, придираться не к чему. */
+        if (now.ready) {
+            setupBox.hidden = true;
+
+            return;
+        }
+
+        setupBox.hidden = false;
+        setupBox.innerHTML = "";
+
+        var head = document.createElement("div");
+        head.className = "setup-head";
+        head.textContent = "Dota ещё не отдаёт данные";
+        setupBox.appendChild(head);
+
+        if (!now.dota_found) {
+            setupBox.appendChild(step(false, "не нашли установленную Dota 2",
+                "проверьте, что игра стоит через Steam на этом компьютере"));
+
+            return;
+        }
+
+        /* Конфиг мы умеем положить сами — это файл в папке игры. */
+        var configNote = now.config_ok
+            ? "лежит в папке игры"
+            : "без него игра не знает, куда слать состояние матча";
+
+        var configStep = step(now.config_ok, "конфиг GSI", configNote);
+
+        if (!now.config_ok) {
+            var button = document.createElement("button");
+            button.className = "btn primary setup-btn";
+            button.type = "button";
+            button.textContent = "установить конфиг";
+
+            button.addEventListener("click", function () {
+                button.disabled = true;
+                button.textContent = "кладу…";
+
+                fetch("/install-config", { method: "POST", body: "{}" })
+                    .then(function (answer) { return answer.json(); })
+                    .then(drawSetup)
+                    .catch(function (error) {
+                        console.error(error);
+                        button.disabled = false;
+                        button.textContent = "не получилось, ещё раз";
+                    });
+            });
+
+            configStep.body.appendChild(button);
+        }
+
+        setupBox.appendChild(configStep);
+
+        /* А параметры запуска — за нас никто: их правит сам Steam, и
+           лезть в его файл при запущенном Steam бесполезно, он перезапишет
+           своё поверх. Поэтому показываем ровно то, что надо сделать. */
+        var launchNote = now.launch_ok
+            ? "уже стоит в параметрах запуска"
+            : "Steam → библиотека → Dota 2 → правая кнопка → Свойства → "
+              + "Параметры запуска → дописать <b>" + now.option + "</b>"
+              + " и перезапустить игру";
+
+        var launchStep = step(now.launch_ok,
+            "параметр запуска " + now.option.replace(/-/g, "‑"),
+            launchNote);
+
+        /* Чужие учётки показываем, только пока параметра нет нигде:
+           когда он уже стоит, список «а вот тут не стоит» — это шум. */
+        if (!now.launch_ok) {
+            (now.accounts || []).forEach(function (account) {
+                var line = document.createElement("div");
+                line.className = "setup-step-note faint";
+                line.textContent = "учётка " + account.account + ": "
+                    + (account.options || "параметров нет");
+                launchStep.body.appendChild(line);
+            });
+        }
+
+        setupBox.appendChild(launchStep);
+
+        var tail = document.createElement("div");
+        tail.className = "setup-tail";
+        tail.textContent = "как только игра пришлёт первый пакет, "
+            + "эта карточка исчезнет сама";
+        setupBox.appendChild(tail);
+    }
+
+    function checkSetup() {
+        fetch("/setup", { cache: "no-store" })
+            .then(function (answer) { return answer.json(); })
+            .then(drawSetup)
+            .catch(function (error) { console.error(error); });
+    }
+
+    checkSetup();
+    setInterval(checkSetup, 5000);
+
+    /* Высота окна — по содержимому: карточка настройки то есть, то нет. */
+    var lastHeight = 0;
+
+    function reportHeight() {
+        if (!bridge || !bridge.fitMenu) { return; }
+
+        var height = Math.ceil(
+            document.querySelector(".home").getBoundingClientRect().height
+        ) + 40;
+
+        if (Math.abs(height - lastHeight) < 4) { return; }
+
+        lastHeight = height;
+
+        bridge.fitMenu(height);
+    }
+
+    if (window.ResizeObserver) {
+        new ResizeObserver(reportHeight).observe(document.querySelector(".home"));
+    }
+
+    /* ---------------- что сейчас происходит ---------------- */
+
+    var state = document.getElementById("state");
+
+    function line(ok, text) {
+        var row = document.createElement("div");
+        row.className = "state-row" + (ok ? " ok" : "");
+        var dot = document.createElement("span");
+        dot.className = "state-dot";
+        row.appendChild(dot);
+        row.appendChild(document.createTextNode(text));
+        return row;
+    }
+
+    function refresh() {
+        if (!bridge || !bridge.status) { return; }
+
+        bridge.status(function (raw) {
+            var now;
+
+            try { now = JSON.parse(raw); } catch (error) { return; }
+
+            state.innerHTML = "";
+            state.appendChild(line(now.dota, now.dota
+                ? (now.match ? "идёт матч" : "Dota 2 запущена, матча нет")
+                : "Dota 2 не запущена"));
+            state.appendChild(line(now.server, now.server
+                ? "приёмник данных работает"
+                : "приёмник данных не отвечает"));
+            state.appendChild(line(now.overlay, now.overlay
+                ? "панель на экране"
+                : "панель скрыта"));
+        });
+    }
+
+    connect(function () {
+        refresh();
+        setInterval(refresh, 2000);
+
+        // Мост появляется позже разметки, и первый замер высоты до него
+        // уходил в пустоту.
+        reportHeight();
+    });
+
+    fetch("/heroes", { cache: "no-store" })
+        .then(function (answer) { return answer.json(); })
+        .then(function (data) {
+            document.getElementById("sub").textContent =
+                count(data.matches) + " матчей · "
+                + data.heroes.length + " героев · данные от "
+                + when(data.built_at);
+
+            document.getElementById("foot").innerHTML =
+                'данные — <a href="https://stratz.com" target="_blank" '
+                + 'rel="noopener">STRATZ</a> &middot; by yst4l';
+        })
+        .catch(function () {
+            document.getElementById("sub").textContent =
+                "приложение не отвечает";
+        });
+}());
+</script>
+</body>
+</html>

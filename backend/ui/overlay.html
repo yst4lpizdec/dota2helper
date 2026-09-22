@@ -1,0 +1,1226 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dota2Helper Overlay</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/app-icon.png">
+</head>
+<body>
+<!-- BEGIN ARTIFACT -->
+
+<!-- Панель и настройки стоят рядом, а не одна вместо другой: крутить
+     прозрачность и размер вслепую, не видя самой панели, бессмысленно. -->
+<div class="stage" id="stage">
+
+<div class="panel" id="panel">
+    <!-- Шапка живёт снаружи «тела»: закрыть, свернуть и открыть настройки
+         должно быть можно и до матча, и после него, а не только когда
+         панель что-то показывает. -->
+    <div class="masthead" id="masthead">
+        <img class="portrait" id="portrait" alt="">
+        <div class="titles">
+            <div class="hero-name" id="hero-name">dota2helper</div>
+            <div class="hero-facts" id="hero-facts"></div>
+        </div>
+        <!-- Значки, а не слова: «мышь» и «опции» подписями читались как
+             часть совета по игре, хотя это управление окном. -->
+        <div class="controls">
+            <button class="ctl" id="home" type="button"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.4 7.2 8 2.6l5.6 4.6V13a.6.6 0 0 1-.6.6H3a.6.6 0 0 1-.6-.6z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg></button>
+            <button class="ctl" id="browse" type="button"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.4 3.2h4.2c.9 0 1.4.5 1.4 1.3v8.3c0-.7-.5-1.1-1.4-1.1H2.4z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M13.6 3.2H9.4C8.5 3.2 8 3.7 8 4.5v8.3c0-.7.5-1.1 1.4-1.1h4.2z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg></button>
+            <button class="ctl" id="mouse" type="button"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2.2 12.4 8 8.4 9.2 6.6 13.3z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button>
+            <button class="ctl" id="opts" type="button"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h12M2 8h12M2 11.5h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="5.5" cy="4.5" r="1.7" fill="currentColor"/><circle cx="10.5" cy="8" r="1.7" fill="currentColor"/><circle cx="6.5" cy="11.5" r="1.7" fill="currentColor"/></svg></button>
+            <button class="ctl" id="fold" type="button"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <button class="ctl danger" id="quit" type="button"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.2 4.2 11.8 11.8M11.8 4.2 4.2 11.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+        </div>
+    </div>
+
+    <div class="waiting" id="waiting">ожидаю игру</div>
+
+    <div id="body" hidden>
+        <div class="enemies" id="enemies" data-block="enemies"></div>
+
+        <div class="now" data-block="now">
+            <div class="now-head">
+                <div class="now-title">брать сейчас</div>
+                <div class="now-phase" id="now-phase"></div>
+            </div>
+            <div class="now-items" id="now-items"></div>
+        </div>
+
+        <div class="rows" id="rows"></div>
+
+        <div class="footer" data-block="footer">
+            <span><span class="swatch"></span>сильнее против этого пика</span>
+            <span>клик по врагу — он против тебя на линии</span>
+            <span class="credit">данные — STRATZ · by yst4l</span>
+        </div>
+    </div>
+
+</div>
+
+    <aside class="sheet" id="sheet" hidden>
+        <div class="sheet-head">
+            <div class="sheet-title">настройки</div>
+            <button class="btn primary" id="done" type="button">готово</button>
+        </div>
+
+        <div class="field">
+            <div class="field-head">
+                <label class="field-name" for="opacity">прозрачность</label>
+                <span class="field-value" id="opacity-value">100%</span>
+            </div>
+            <input type="range" id="opacity" min="30" max="100" value="100">
+        </div>
+
+        <div class="field">
+            <div class="field-head">
+                <label class="field-name" for="scale">размер</label>
+                <span class="field-value" id="scale-value">100%</span>
+            </div>
+            <input type="range" id="scale" min="70" max="180" value="100">
+        </div>
+
+        <div class="field">
+            <label class="switch">
+                <input type="checkbox" id="hide-without-dota">
+                <span>показывать панель только в матче</span>
+            </label>
+        </div>
+
+        <div class="field">
+            <div class="field-head">
+                <span class="field-name">что показывать</span>
+            </div>
+            <div class="blocks" id="blocks"></div>
+        </div>
+
+        <div class="sheet-foot">
+            <button class="btn" id="recenter" type="button">вернуть на экран</button>
+            <button class="btn" id="quit2" type="button">закрыть оверлей</button>
+        </div>
+    </aside>
+
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script>
+(function () {
+    "use strict";
+
+    var PREVIEW = !!window.__STATE__;
+    var ICONS = window.__ICONS__ || null;
+
+    function icon(kind, name) {
+        if (!name) { return ""; }
+        if (ICONS) { return ICONS[kind + "/" + name] || ""; }
+        return "/icons/" + kind + "/" + name + ".png";
+    }
+
+    function el(tag, cls, text) {
+        var node = document.createElement(tag);
+        if (cls) { node.className = cls; }
+        if (text !== undefined) { node.textContent = text; }
+        return node;
+    }
+
+    function minutes(seconds) {
+        return seconds ? Math.round(seconds / 60) + " мин" : "";
+    }
+
+    function title(name) {
+        return name.replace(/_/g, " ").replace(/\b\w/g, function (c) {
+            return c.toUpperCase();
+        });
+    }
+
+    /* Имена героев приходят техническими: nevermore, zuus, furion. Это
+       те имена, под которыми героев когда-то выпустили, и игрок их не
+       знает — человеческое имя движок присылает отдельной картой. */
+    var heroNames = {};
+
+    function heroTitle(name) {
+        return heroNames[name] || title(name);
+    }
+
+    /* Название предмета из базы уже написано так, как в игре: «Boots of
+       Travel», «Aghanim's Blessing». Прогонять его через title() нельзя —
+       он делает каждое слово с заглавной и получается «Boots Of Travel»
+       и «Aghanim'S Blessing». title() нужен только техническим именам. */
+    function itemTitle(entry) {
+        return entry.display || title(entry.item);
+    }
+
+    /* ---------------- подсказки ---------------- */
+
+    var tip = document.getElementById("tip");
+
+    function bindTip(node, html) {
+        node.addEventListener("mouseenter", function () {
+            tip.innerHTML = html;
+            tip.classList.add("show");
+            var box = node.getBoundingClientRect();
+            tip.style.left = "0px";
+            tip.style.top = "0px";
+            var own = tip.getBoundingClientRect();
+            var x = box.left + box.width / 2 - own.width / 2;
+            var y = box.top - own.height - 6;
+            if (y < 4) { y = box.bottom + 6; }
+            x = Math.max(6, Math.min(x, window.innerWidth - own.width - 6));
+            tip.style.left = Math.round(x) + "px";
+            tip.style.top = Math.round(y) + "px";
+        });
+        node.addEventListener("mouseleave", function () {
+            tip.classList.remove("show");
+        });
+    }
+
+    /* «Против кого» человеческими словами: имена врагов и насколько
+       чаще против них берут этот предмет. */
+    function against(because) {
+        if (!because || !because.length) { return ""; }
+
+        var names = because.map(function (who) {
+            return who.display + " +" + Math.round(who.shift) + "%"
+                + (who.lane ? " (твоя линия)" : "");
+        });
+
+        return "чаще берут против: " + names.join(", ");
+    }
+
+    function itemTip(entry) {
+        var parts = [itemTitle(entry)];
+        if (entry.cost) {
+            parts.push('<span class="price">' + entry.cost * (entry.count || 1) + " золота</span>");
+        }
+        if (entry.median_time) {
+            parts.push('<span class="when">берут к ' + minutes(entry.median_time) + "</span>");
+        }
+        if (entry.share) { parts.push(entry.share + "% игр"); }
+        if (entry.alt_to) {
+            parts.push("другая ветка: вместо " + entry.alt_to);
+        }
+        if (entry.alt_to) { /* уже добавлено выше */ }
+        if (entry.owned) { parts.push("уже куплено"); }
+
+        var line = parts.join(" &middot; ");
+
+        // Зачем предмет нужен и против кого он поднялся — отдельными
+        // строками: это ответ на «почему он вообще здесь», а не ещё один
+        // факт в общую строку через точку.
+        if (entry.role) {
+            line += '<span class="tip-role">' + entry.role + "</span>";
+        }
+
+        var blame = against(entry.because);
+
+        if (blame) {
+            line += '<span class="tip-why">' + blame + "</span>";
+        } else if (entry.boost >= 3 || entry.score >= 3) {
+            line += '<span class="tip-why">чаще берут против этого пика</span>';
+        }
+
+        return line;
+    }
+
+    /* ---------------- отрисовка ---------------- */
+
+    /* Картинка предмета с запасным видом. У рецептов своих иконок нет —
+       Valve рисует их все одной, которой у нас в наборе не оказалось, —
+       и вместо предмета в ряду зияла иконка сломанного изображения. */
+    function artwork(kind, name, cls) {
+        var art = el("img", cls);
+        art.alt = "";
+
+        art.addEventListener("error", function () {
+            art.removeAttribute("src");
+            art.classList.add("nopic");
+        });
+
+        art.src = icon(kind, name);
+
+        return art;
+    }
+
+    /* Под предметом всегда минута. Раньше в коре и поздней стояла доля
+       игр: медианы там сидели кучей в середине окна и порядка покупок не
+       показывали. Теперь предмет попадает в фазу по своей медиане, а не
+       по окну покупки, и минута снова означает ровно то, что написано, —
+       когда его обычно собирают. */
+    function badgeOf(phase) {
+        return "time";
+    }
+
+    function bigItem(entry, badge) {
+        var cell = el("button", "big" + (entry.boost >= 3 ? " keyed" : ""));
+        cell.type = "button";
+
+        cell.appendChild(artwork("items", entry.item, "art"));
+
+        /* Штуки видны только по значку: две ветки и одна ветка — это
+           разные закупки, а иконка у них одна и та же. */
+        if (entry.count > 1) {
+            cell.appendChild(el("span", "stack", "×" + entry.count));
+        }
+
+        cell.appendChild(el("div", "name", itemTitle(entry)));
+
+        var meta = el("div", "meta");
+        if (entry.cost) {
+            meta.appendChild(el("span", "gold",
+                entry.cost * (entry.count || 1)));
+        }
+        if (badge === "time" && entry.median_time) {
+            meta.appendChild(el("span", "clock", minutes(entry.median_time)));
+        } else if (badge === "share" && entry.share) {
+            meta.appendChild(el("span", "part", Math.round(entry.share) + "% игр"));
+        }
+        cell.appendChild(meta);
+
+        bindTip(cell, itemTip(entry));
+        return cell;
+    }
+
+    function smallItem(entry, badge) {
+        var classes = "cell";
+        if (entry.boost >= 3) { classes += " keyed"; }
+        if (entry.owned) { classes += " owned"; }
+
+        var cell = el("button", classes);
+        cell.type = "button";
+
+        cell.appendChild(artwork("items", entry.item, "art"));
+
+        if (badge === "time" && entry.median_time) {
+            cell.appendChild(el("span", "tick", Math.round(entry.median_time / 60) + "м"));
+        } else if (badge === "share" && entry.share) {
+            cell.appendChild(el("span", "tick share", Math.round(entry.share) + "%"));
+        } else if (entry.count > 1) {
+            cell.appendChild(el("span", "tick count", "×" + entry.count));
+        }
+
+        bindTip(cell, itemTip(entry));
+        return cell;
+    }
+
+    /* Что свёрнуто. Ключ — название раздела: его хватает, оно уникально,
+       и им же раздел помечен на экране. Хранится в настройках, иначе
+       сворачивать пришлось бы заново после каждого запуска. */
+    var folded = {};
+
+    function addRow(host, key, label, meta, build) {
+        var card = el("section", "card" + (folded[label] ? " folded" : ""));
+        card.dataset.block = key;
+
+        var head = el("button", "card-head");
+        head.type = "button";
+        head.appendChild(el("span", "card-title", label));
+
+        if (meta) { head.appendChild(el("span", "card-meta", meta)); }
+
+        head.appendChild(el("span", "card-chev"));
+
+        head.addEventListener("click", function () {
+            folded[label] = !card.classList.contains("folded");
+            card.classList.toggle("folded", folded[label]);
+
+            reportHeight();
+
+            tell("setFolded", JSON.stringify(
+                Object.keys(folded).filter(function (name) {
+                    return folded[name];
+                })
+            ));
+        });
+
+        var body = el("div", "card-body");
+        body.appendChild(build());
+
+        card.appendChild(head);
+        card.appendChild(body);
+        host.appendChild(card);
+
+        return card;
+    }
+
+    /* Подпись под иконкой: "time" — медианная минута, "share" — доля игр,
+       null — только количество. Минута осмысленна лишь в ранней игре: там
+       разброс настоящий. В коре и поздней все медианы сидят в середине
+       своего окна (у Зевса семь предметов на 15-19-й минуте), и число под
+       картинкой врало бы, что это порядок покупок. На деле это набор
+       альтернатив, и про них говорит доля, а не время. */
+    function strip(entries, badge) {
+        var box = el("div", "strip");
+        entries.forEach(function (entry) {
+            box.appendChild(smallItem(entry, badge));
+        });
+        return box;
+    }
+
+    /* Позицию мы выводим из пятёрки союзников, и на нестандартном пике
+       она промахивается. Поэтому рядом с ней — кнопки: позиции, по
+       которым у нас есть матчи на этом герое. Позиции без данных не
+       рисуем вовсе, чтобы нельзя было выбрать пустоту. */
+    /* Позиция и линия — одно и то же: на какой линии стоит игрок,
+       движок выводит из позиции (лёгкая одной команды против сложной
+       другой, мид против мида). Поэтому подписываем сами позиции, а
+       отдельный выбор линии не нужен. */
+    var ROLES = {
+        POSITION_1: ["керри", "лёгкая линия"],
+        POSITION_2: ["мид", "средняя линия"],
+        POSITION_3: ["оффлейн", "сложная линия"],
+        POSITION_4: ["роумер", "поддержка на сложной"],
+        POSITION_5: ["саппорт", "поддержка на лёгкой"]
+    };
+
+    function positions(state) {
+        var box = el("span", "roles");
+        var known = state.positions || [];
+
+        if (!known.length) {
+            box.appendChild(el("span", "role-none",
+                (state.position || "").replace("POSITION_", "поз. ")));
+
+            return box;
+        }
+
+        known.forEach(function (entry) {
+            var digit = entry.position.replace("POSITION_", "");
+            var role = ROLES[entry.position] || [digit, ""];
+            var on = entry.position === state.position;
+
+            var cell = el("button", "role" + (on ? " on" : ""), digit);
+            cell.type = "button";
+            cell.dataset.position = entry.position;
+
+            bindTip(cell, "поз. " + digit + " &middot; " + role[0] +
+                ", " + role[1] + " &middot; " + entry.matches + " игр" +
+                (on && !state.position_manual ? " &middot; выбрана по пику" : ""));
+
+            box.appendChild(cell);
+        });
+
+        // Название выбранной позиции словами: цифра сама по себе ничего
+        // не говорит о том, на какой линии стоять.
+        var chosen = ROLES[state.position];
+
+        if (chosen) {
+            box.appendChild(el("span", "role-name", chosen[0]));
+        }
+
+        if (!state.position_manual) {
+            box.appendChild(el("span", "role-auto", "авто"));
+        }
+
+        return box;
+    }
+
+    /* Стадии до горна: пик, стратегия, загрузка, пре-гейм. Пока идёт
+       любая из них, игрок ещё стоит у фонтана с полным кошельком. */
+    var PRE_HORN = {
+        DOTA_GAMERULES_STATE_HERO_SELECTION: true,
+        DOTA_GAMERULES_STATE_STRATEGY_TIME: true,
+        DOTA_GAMERULES_STATE_TEAM_SHOWCASE: true,
+        DOTA_GAMERULES_STATE_WAIT_FOR_MAP_TO_LOAD: true,
+        DOTA_GAMERULES_STATE_PRE_GAME: true
+    };
+
+    function preHorn(match, clock) {
+        if (match.game_state) { return !!PRE_HORN[match.game_state]; }
+
+        // Без стадии (например, в превью) судим по часам: до горна они
+        // отрицательные или нулевые.
+        return clock <= 0;
+    }
+
+    /* Панель сейчас без матча, и показывать ей нечего. */
+    var idle = true;
+
+    /* Открыта ли обратная сторона панели — настройки. */
+    var sheetOpen = false;
+
+    function render(state) {
+        var waiting = document.getElementById("waiting");
+        var body = document.getElementById("body");
+        var masthead = document.getElementById("masthead");
+
+        if (!state || state.waiting || state.error) {
+            idle = true;
+            masthead.classList.add("idle");
+            document.getElementById("hero-name").textContent = "dota2helper";
+            document.getElementById("hero-facts").innerHTML = "";
+            waiting.textContent = (state && state.error) || "ожидаю игру";
+
+            /* Шапку не трогаем: крестик и настройки нужны и без матча. */
+            waiting.hidden = false;
+            body.hidden = true;
+
+            reportHeight();
+            return;
+        }
+
+        idle = false;
+        masthead.classList.remove("idle");
+        waiting.hidden = true;
+        body.hidden = false;
+
+        var match = state.match || {};
+        var owned = {};
+        (state.owned || []).forEach(function (name) { owned[name] = true; });
+
+        document.getElementById("portrait").src = icon("heroes", state.hero);
+        document.getElementById("hero-name").textContent =
+            state.hero_display || heroTitle(state.hero);
+
+        var facts = document.getElementById("hero-facts");
+        facts.innerHTML = "";
+        facts.appendChild(positions(state));
+
+        /* Винрейт и число игр — одним куском: строка узкая, и при
+           переносе «54.2% побед» не должно расставаться с «3104 игр»,
+           а разделительная точка — оставаться сиротой в конце строки. */
+        var wr = el("span", "tally");
+        wr.innerHTML =
+            "<b>" + state.winrate + "%</b> побед"
+            + ' <span class="dot">·</span> ' + state.matches + " игр";
+        facts.appendChild(wr);
+
+        /* враги */
+        var lane = {};
+        (state.lane_against || []).forEach(function (name) { lane[name] = true; });
+
+        var enemies = document.getElementById("enemies");
+        enemies.innerHTML = "";
+        (match.enemies || []).forEach(function (name) {
+            var cell = el("button", "enemy" + (lane[name] ? " lane" : ""));
+            cell.type = "button";
+            cell.dataset.hero = name;
+            var art = el("img");
+            art.src = icon("heroes", name);
+            art.alt = "";
+            cell.appendChild(art);
+            bindTip(cell, heroTitle(name)
+                + (lane[name] ? " &middot; против тебя на линии" : ""));
+            enemies.appendChild(cell);
+        });
+
+        /* брать сейчас */
+        var clock = match.clock || 0;
+
+        /* Границы те же, по которым предмет попадает в фазу: до 10-й
+           минуты ранняя, до 25-й кор, дальше поздняя. Поздней фазы тут
+           раньше не было вовсе, и после двадцать пятой минуты панель
+           продолжала звать в «основной закуп», который уже собран. */
+        var phase = clock < 600 ? "early" : (clock < 1500 ? "core" : "late");
+
+        var PHASE_NAME = {
+            early: "ранняя",
+            core: "кор",
+            late: "поздняя"
+        };
+
+        var PHASE_FULL = {
+            early: "ранняя игра",
+            core: "основной закуп",
+            late: "поздняя игра"
+        };
+
+        var purchase = state.starting_purchase || {};
+
+        function mark(entries) {
+            return (entries || []).map(function (entry) {
+                return Object.assign({}, entry, { owned: !!owned[entry.item] });
+            });
+        }
+
+        /* Основной ряд фазы — только то, что берут часто. Редкое уезжает
+           в «ситуативно»: иначе Power Treads из 4% игр стоял вровень с
+           Arcane Boots из 76% и читался как равный совет. */
+        function cutoff(entries) {
+            var top = 0;
+
+            (entries || []).forEach(function (entry) {
+                if (entry.share > top) { top = entry.share; }
+            });
+
+            return Math.max(SHARE_FLOOR, top / SHARE_RATIO);
+        }
+
+        /* alt_to — вторая ветка той же развилки: Kaya and Sange рядом с
+           Yasha and Kaya читались как «возьми оба», хотя собирают один. */
+        function common(entries) {
+            var bar = cutoff(entries);
+
+            return (entries || []).filter(function (entry) {
+                return entry.share >= bar && !entry.alt_to;
+            });
+        }
+
+        function rare(entries) {
+            var bar = cutoff(entries);
+
+            return (entries || []).filter(function (entry) {
+                return entry.share < bar || entry.alt_to;
+            });
+        }
+
+        /* До горна брать «сейчас» нечего, кроме стартовой закупки: ряд
+           ранней игры в этот момент показывал первый предмет билда —
+           Null Talisman за 505 золота, который на старте не покупают. */
+        var now = document.getElementById("now-items");
+        now.innerHTML = "";
+
+        if (preHorn(match, clock) && (purchase.items || []).length) {
+            document.getElementById("now-phase").textContent =
+                "стартовая закупка · " + purchase.total + " / " +
+                purchase.budget + " зол.";
+
+            mark(purchase.items).slice(0, 6).forEach(function (entry) {
+                now.appendChild(bigItem(entry, null));
+            });
+        } else {
+            document.getElementById("now-phase").textContent =
+                PHASE_FULL[phase] +
+                (clock ? " · " + Math.floor(clock / 60) + "-я минута" : "");
+
+            common(state[phase]).filter(function (entry) {
+                return !owned[entry.item];
+            }).slice(0, 3).forEach(function (entry) {
+                now.appendChild(bigItem(entry, badgeOf(phase)));
+            });
+        }
+
+        /* вторичные ряды */
+        var rows = document.getElementById("rows");
+        rows.innerHTML = "";
+
+        if ((purchase.items || []).length) {
+            addRow(rows, "starting", "старт",
+                purchase.total + " / " + purchase.budget + " зол.",
+                function () { return strip(mark(purchase.items), null); });
+        }
+
+        /* Сначала текущая фаза, потом остальные по порядку: билд читается
+           как лента времени, но то, что нужно сейчас, стоит первым. */
+        var order = ["early", "core", "late"].sort(function (a, b) {
+            if (a === phase) { return -1; }
+            if (b === phase) { return 1; }
+            return 0;
+        });
+
+        order.forEach(function (name) {
+            if (!common(state[name]).length) { return; }
+
+            addRow(rows, "phase", PHASE_NAME[name],
+                name === phase ? "сейчас" : null,
+                function () {
+                    return strip(common(state[name]).slice(0, 7), badgeOf(name));
+                });
+        });
+
+        /* Редкое из всех фаз — одной строкой. Это не «плохие» предметы,
+           а выбор под ситуацию, и стоять он должен отдельно от того, что
+           берут почти всегда. */
+        var unusual = order.reduce(function (all, name) {
+            return all.concat(rare(state[name]));
+        }, []);
+
+        if (unusual.length) {
+            /* Правило пишем прямо в заголовке: иначе непонятно, почему
+               один и тот же предмет на одной позиции в основном ряду,
+               а на другой — здесь. */
+            addRow(rows, "unusual", "реже",
+                "втрое реже основного", function () {
+                return strip(
+                    unusual.sort(function (a, b) { return b.share - a.share; })
+                           .slice(0, 7),
+                    "share"
+                );
+            });
+        }
+
+        if ((state.consumables || []).length) {
+            addRow(rows, "consumables", "расход", "и варды",
+                function () { return strip((state.consumables || []).slice(0, 7), null); });
+        }
+
+        if ((state.situational || []).length) {
+            /* Здесь не ряд иконок, а строки с текстом. Ситуативный
+               предмет без ответа на «зачем» и «против кого» — просто
+               картинка, по которой нечего решать: игрок и так видит, что
+               она не из основной сборки. */
+            addRow(rows, "situational", "против", "этого пика", function () {
+                var box = el("div", "why");
+
+                (state.situational || []).slice(0, 6).forEach(function (entry) {
+                    var line = el("button", "why-row");
+                    line.type = "button";
+
+                    line.appendChild(artwork("items", entry.item, "why-art"));
+
+                    var text = el("div", "why-text");
+
+                    var name = el("div", "why-name",
+                        itemTitle(entry));
+
+                    /* Пометка нужна, чтобы совет не читался как «купи
+                       седьмой предмет»: чаще всего это про то, что вещь
+                       из плана стоит взять раньше обычного. */
+                    if (entry.in_build) {
+                        name.appendChild(el("span", "why-tag", "в сборке"));
+                    }
+
+                    text.appendChild(name);
+
+                    if (entry.role) {
+                        text.appendChild(el("div", "why-role", entry.role));
+                    }
+
+                    var blame = (entry.because || []).map(function (who) {
+                        return who.display;
+                    });
+
+                    if (blame.length) {
+                        text.appendChild(el("div", "why-who",
+                            "против " + blame.join(", ")));
+                    }
+
+                    line.appendChild(text);
+
+                    bindTip(line, itemTip(
+                        Object.assign({}, entry, { boost: entry.score })
+                    ));
+
+                    box.appendChild(line);
+                });
+
+                return box;
+            });
+        }
+
+        if ((state.skills || []).length) {
+            addRow(rows, "skills", "прокачка", null, function () {
+                var box = el("div", "skills");
+                (state.skills || []).slice(0, 8).forEach(function (entry, index) {
+                    var cell = el("button", "skill" + (entry.mark === "ульт" ? " ult" : ""));
+                    cell.type = "button";
+                    var art = el("img");
+                    art.src = icon("abilities", entry.icon);
+                    art.alt = "";
+                    cell.appendChild(art);
+                    cell.appendChild(el("span", "key", entry.mark || "·"));
+                    bindTip(cell, (index + 1) + "-м уровнем &middot; " +
+                        (entry.display || entry.ability));
+                    box.appendChild(cell);
+                });
+                return box;
+            });
+        }
+
+        if ((state.talents || []).length) {
+            addRow(rows, "talents", "таланты", null, function () {
+                var box = el("div", "talents");
+                (state.talents || []).forEach(function (entry) {
+                    var line = el("div", "talent" + (entry.stale ? " stale" : ""));
+                    line.appendChild(el("span", "lvl", entry.level));
+                    line.appendChild(el("span", "side" + (entry.side ? "" : " none"),
+                        entry.side || "—"));
+                    var what = el("span", "what", entry.display || entry.talent);
+                    if (entry.stale) {
+                        what.appendChild(el("span", "stale-note", "  старый патч"));
+                    }
+                    line.appendChild(what);
+                    box.appendChild(line);
+                });
+                return box;
+            });
+        }
+    }
+
+    /* ---------------- мост в приложение ---------------- */
+
+    /* Внутри оверлея страницу показывает Chromium, встроенный в окно Qt,
+       и все действия окна — подвинуть, свернуть, закрыть — умеет только
+       Python. В обычном браузере моста нет, и страница просто остаётся
+       картинкой: так её можно открыть и посмотреть. */
+
+    var bridge = null;
+
+    function tell(method, arg) {
+        if (!bridge || !bridge[method]) { return; }
+
+        /* Мост считает аргументы по arguments.length, и лишний undefined
+           для слота без параметров — уже несовпадение: вызов молча
+           не доходит. Так не работали «мышь», крестик, «вернуть на
+           экран» и сохранение позиции после перетаскивания. */
+        if (arg === undefined) {
+            bridge[method]();
+        } else {
+            bridge[method](arg);
+        }
+    }
+
+    function connectBridge(done) {
+        if (PREVIEW || !window.qt || !window.qt.webChannelTransport) {
+            done(false);
+            return;
+        }
+
+        var script = document.createElement("script");
+        script.src = "qrc:///qtwebchannel/qwebchannel.js";
+        script.onload = function () {
+            new QWebChannel(window.qt.webChannelTransport, function (channel) {
+                bridge = channel.objects.app;
+                done(true);
+            });
+        };
+        script.onerror = function () { done(false); };
+        document.head.appendChild(script);
+    }
+
+    /* ---------------- высота окна по содержимому ---------------- */
+
+    var stage = document.getElementById("stage");
+    var panel = document.getElementById("panel");
+    var lastSize = "";
+
+    function reportHeight() {
+        var box = stage.getBoundingClientRect();
+        var size = [Math.ceil(box.width), Math.ceil(box.height)];
+
+        if (!size[0] || !size[1]) { return; }
+
+        if (size.join("x") !== lastSize) {
+            lastSize = size.join("x");
+            tell("fit", JSON.stringify(size));
+        }
+    }
+
+    if (window.ResizeObserver) {
+        new ResizeObserver(reportHeight).observe(stage);
+    }
+
+    /* ---------------- перетаскивание окна ---------------- */
+
+    /* Окно безрамочное, а мышь достаётся Chromium, не Qt. Поэтому тащим
+       сами: считаем смещение курсора и просим Python подвинуть окно. */
+
+    var dragging = false;
+    var lastX = 0;
+    var lastY = 0;
+
+    stage.addEventListener("mousedown", function (event) {
+        if (event.button !== 0) { return; }
+
+        /* Элементы управления тащат сами себя. Раньше сюда попадал и
+           ползунок: preventDefault отменял его собственный захват мыши,
+           и вместо значения игрок двигал всё окно. */
+        if (event.target.closest("button, input, label, select, textarea, a")) {
+            return;
+        }
+
+        dragging = true;
+        lastX = event.screenX;
+        lastY = event.screenY;
+        event.preventDefault();
+    });
+
+    window.addEventListener("mousemove", function (event) {
+        if (!dragging) { return; }
+
+        var dx = event.screenX - lastX;
+        var dy = event.screenY - lastY;
+
+        if (dx || dy) {
+            lastX = event.screenX;
+            lastY = event.screenY;
+            tell("drag", JSON.stringify([dx, dy]));
+        }
+    });
+
+    window.addEventListener("mouseup", function () {
+        if (dragging) {
+            dragging = false;
+            tell("dragged");
+        }
+    });
+
+    /* ---------------- кнопки ---------------- */
+
+    /* Подписи к значкам — своей подсказкой, а не системной: системная
+       над окном поверх игры показывается не всегда. */
+    bindTip(document.getElementById("mouse"),
+        "клики панели или игре &middot; Ctrl+Alt+F");
+    bindTip(document.getElementById("browse"),
+        "справочник: герои, предметы и проценты");
+    bindTip(document.getElementById("home"), "главное меню");
+
+    document.getElementById("home").addEventListener("click", function () {
+        tell("openMenu");
+    });
+    bindTip(document.getElementById("opts"), "настройки");
+
+    document.getElementById("browse").addEventListener("click", function () {
+        tell("openBrowser");
+    });
+    bindTip(document.getElementById("fold"),
+        "краткий вид &middot; Ctrl+Alt+D");
+    bindTip(document.getElementById("quit"), "закрыть оверлей");
+
+    document.getElementById("quit").addEventListener("click", function () {
+        tell("quit");
+    });
+
+    document.getElementById("fold").addEventListener("click", function () {
+        setCompact(!compact);
+        tell("setCompact", compact);
+    });
+
+    /* ---------------- настройки ---------------- */
+
+    /* Список того, что можно выключить. Ключи совпадают с рядами, которые
+       строит render, — Python про эти названия ничего не знает и просто
+       хранит список выключенного. */
+    /* Граница между «основным» и «ситуативным» считается от самого
+       частого предмета ряда, а не задана числом. Фиксированные 15%
+       врали в обе стороны: на позиции, где ни один предмет до них не
+       дотягивал, ряд «кор» оставался с одним предметом, а на позиции с
+       одним доминирующим выбором туда пролезали случайные.
+
+       Втрое — потому что предмет из каждой третьей сборки ещё вариант
+       основного пути, а из каждой десятой уже про конкретную ситуацию. */
+    var SHARE_RATIO = 3;
+
+    /* Ниже этого — ситуативно при любом лидере: если и самый частый
+       предмет берут в 9% игр, третья часть от него это шум. */
+    var SHARE_FLOOR = 5;
+
+    var BLOCKS = [
+        ["enemies", "враги"],
+        ["now", "брать сейчас"],
+        ["starting", "старт"],
+        ["phase", "ранняя и кор"],
+        ["consumables", "расходники"],
+        ["unusual", "ситуативно"],
+        ["situational", "против пика"],
+        ["skills", "прокачка"],
+        ["talents", "таланты"],
+        ["footer", "подписи внизу"]
+    ];
+
+    var hidden = {};
+    var sheet = document.getElementById("sheet");
+    var bodyEl = document.getElementById("body");
+
+    /* Настройки приезжают из Python асинхронно и могут опоздать к первой
+       отрисовке. Поэтому свёрнутость не только учитывается при сборке
+       карточки, но и применяется к уже готовым. */
+    function applyFolded() {
+        var cards = document.querySelectorAll(".card");
+
+        Array.prototype.forEach.call(cards, function (card) {
+            var head = card.querySelector(".card-title");
+
+            if (head) {
+                card.classList.toggle("folded", !!folded[head.textContent]);
+            }
+        });
+
+        reportHeight();
+    }
+
+    function applyHidden() {
+        BLOCKS.forEach(function (pair) {
+            // Именно все узлы: «ранняя и кор» — это два ряда с одним ключом.
+            var nodes = document.querySelectorAll(
+                '[data-block="' + pair[0] + '"]'
+            );
+
+            Array.prototype.forEach.call(nodes, function (node) {
+                node.hidden = !!hidden[pair[0]];
+            });
+        });
+
+        reportHeight();
+    }
+
+    function buildBlocks() {
+        var host = document.getElementById("blocks");
+        host.innerHTML = "";
+
+        BLOCKS.forEach(function (pair) {
+            var label = el("label");
+            var box = document.createElement("input");
+            box.type = "checkbox";
+            box.id = "block-" + pair[0];
+            box.checked = !hidden[pair[0]];
+
+            box.addEventListener("change", function () {
+                hidden[pair[0]] = !box.checked;
+                applyHidden();
+                tell("setHidden", JSON.stringify(
+                    Object.keys(hidden).filter(function (key) {
+                        return hidden[key];
+                    })
+                ));
+            });
+
+            label.appendChild(box);
+            label.appendChild(el("span", null, pair[1]));
+            host.appendChild(label);
+        });
+    }
+
+    function slider(id, onChange) {
+        var input = document.getElementById(id);
+        var value = document.getElementById(id + "-value");
+
+        function paintTrack() {
+            var share = (input.value - input.min) / (input.max - input.min);
+            input.style.setProperty("--pct", Math.round(share * 100) + "%");
+            value.textContent = input.value + "%";
+        }
+
+        input.addEventListener("input", function () {
+            paintTrack();
+            onChange(Number(input.value));
+        });
+
+        paintTrack();
+
+        return input;
+    }
+
+    var opacityInput = slider("opacity", function (percent) {
+        tell("setOpacity", percent);
+    });
+
+    var scaleInput = slider("scale", function (percent) {
+        tell("setScale", percent);
+    });
+
+    function showSheet(open) {
+        sheetOpen = !!open;
+
+        // Панель остаётся на месте: настройки встают рядом, и видно,
+        // что именно меняют ползунки.
+        sheet.hidden = !sheetOpen;
+
+        document.getElementById("opts").classList.toggle("on", sheetOpen);
+
+        reportHeight();
+    }
+
+    document.getElementById("opts").addEventListener("click", function () {
+        showSheet(true);
+    });
+
+    document.getElementById("done").addEventListener("click", function () {
+        // Настройки открывали из меню — туда и возвращаемся: за ними
+        // не стоит панель, которую имело бы смысл показать.
+        if (document.body.classList.contains("solo")) {
+            document.body.classList.remove("solo");
+            showSheet(false);
+            tell("closeSettings");
+
+            return;
+        }
+
+        showSheet(false);
+    });
+
+    document.getElementById("recenter").addEventListener("click", function () {
+        tell("resetPosition");
+    });
+
+    document.getElementById("quit2").addEventListener("click", function () {
+        tell("quit");
+    });
+
+    var hideBox = document.getElementById("hide-without-dota");
+
+    hideBox.addEventListener("change", function () {
+        tell("setHideWithoutDota", hideBox.checked);
+    });
+
+    function loadSettings() {
+        if (!bridge || !bridge.settings) { return; }
+
+        bridge.settings(function (raw) {
+            var saved;
+
+            try { saved = JSON.parse(raw); } catch (error) { return; }
+
+            (saved.hidden || []).forEach(function (key) { hidden[key] = true; });
+            (saved.folded || []).forEach(function (key) { folded[key] = true; });
+
+            hideBox.checked = saved.hide_without_dota !== false;
+
+            applyFolded();
+
+            opacityInput.value = saved.opacity || 100;
+            scaleInput.value = Math.round((saved.scale || 1) * 100);
+
+            opacityInput.dispatchEvent(new Event("input"));
+            scaleInput.dispatchEvent(new Event("input"));
+
+            buildBlocks();
+            applyHidden();
+        });
+    }
+
+    document.getElementById("mouse").addEventListener("click", function () {
+        tell("toggleClickThrough");
+    });
+
+    /* ---------------- компактный вид ---------------- */
+
+    var compact = false;
+
+    function setCompact(value) {
+        compact = !!value;
+
+        document.getElementById("rows").hidden = compact;
+        document.getElementById("enemies").hidden = compact;
+        document.querySelector(".footer").hidden = compact;
+        document.getElementById("hero-facts").hidden = compact;
+        // Раньше здесь подменялся текст кнопки; теперь там значок,
+        // и его направление задаёт класс на body.
+        document.body.classList.toggle("compact", compact);
+
+        reportHeight();
+    }
+
+    /* Клик по цифре — играю на этой позиции, пересчитай под неё. */
+    document.getElementById("hero-facts").addEventListener("click", function (event) {
+        var cell = event.target.closest(".role");
+
+        if (!cell || cell.classList.contains("on")) { return; }
+
+        // Красим сразу: ответ приедет со следующим опросом, а кнопка
+        // должна отозваться на клик немедленно.
+        var siblings = cell.parentNode.querySelectorAll(".role");
+
+        Array.prototype.forEach.call(siblings, function (node) {
+            node.classList.toggle("on", node === cell);
+        });
+
+        tell("setPosition", cell.dataset.position);
+    });
+
+    /* Клик по врагу — отметить лайн-оппонента. */
+    document.getElementById("enemies").addEventListener("click", function (event) {
+        var cell = event.target.closest(".enemy");
+
+        if (!cell || !cell.dataset.hero) { return; }
+
+        var chosen = laneChoice.slice();
+        var at = chosen.indexOf(cell.dataset.hero);
+
+        if (at >= 0) { chosen.splice(at, 1); } else { chosen.push(cell.dataset.hero); }
+
+        laneChoice = chosen;
+        cell.classList.toggle("lane");
+
+        tell("setLane", JSON.stringify(chosen));
+    });
+
+    var laneChoice = [];
+
+    /* ---------------- источник данных ---------------- */
+
+    /* Перерисовываем только на изменившихся данных: иначе каждые полторы
+       секунды пересоздаётся вся разметка, и подсказка под курсором
+       исчезает вместе со своей иконкой. */
+    var lastPaint = "";
+
+    function paint(state) {
+        if (state && state.names) { heroNames = state.names; }
+
+        // Пакеты от игры — второй признак того, что Дота запущена.
+        tell("gameLive", !!(state && state.game_live));
+
+        // А это уже про матч: драфт, загрузка или сама игра. В меню Доты
+        // пакеты тоже идут, но панели там делать нечего.
+        tell("matchLive", !!(state && state.in_match));
+
+        var signature = JSON.stringify(state);
+
+        if (signature === lastPaint) { return; }
+
+        lastPaint = signature;
+
+        if (state && state.lane_manual) {
+            laneChoice = (state.lane_against || []).slice();
+        }
+
+        render(state);
+
+        // Ряды пересоздались — заново прячем и сворачиваем что надо.
+        applyFolded();
+        applyHidden();
+    }
+
+    connectBridge(function (connected) {
+        buildBlocks();
+
+        if (connected) {
+            document.body.classList.add("app");
+            loadSettings();
+            tell("ready");
+        }
+
+        if (PREVIEW) {
+            paint(window.__STATE__);
+            return;
+        }
+
+        var poll = function () {
+            fetch("/state", { cache: "no-store" })
+                .then(function (response) { return response.json(); })
+                .then(paint)
+                .then(function () { tell("serverAlive", true); })
+                .catch(function (error) {
+                    // Молчаливый catch прятал ошибки разметки: панель
+                    // просто показывала «ожидаю игру», и понять почему
+                    // было нельзя.
+                    console.error("оверлей: " + (error && error.stack || error));
+                    tell("serverAlive", false);
+                    paint(null);
+                });
+        };
+
+        poll();
+        setInterval(poll, 1500);
+    });
+
+    window.__render = paint;
+    window.__setCompact = setCompact;
+
+    /* Зум меняет Qt, а размер страница меряет в своих пикселях: сама она
+       изменения не замечает и окно остаётся прежним, обрезая панель.
+       Поэтому после смены масштаба Python просит померить заново. */
+    /* Меню просит открыть настройки. Пока матча нет, показывать рядом
+       нечего — панель в этот момент это пустое «ожидаю игру», — поэтому
+       она прячется и остаётся одна карточка настроек. */
+    window.__openSettings = function (solo) {
+        document.body.classList.toggle("solo", !!solo);
+        showSheet(true);
+    };
+
+    window.__setHideWithoutDota = function (value) {
+        hideBox.checked = !!value;
+    };
+
+    window.__refit = function () {
+        lastSize = "";
+        reportHeight();
+    };
+}());
+</script>
+<!-- END ARTIFACT -->
+</body>
+</html>

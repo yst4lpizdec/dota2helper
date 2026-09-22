@@ -1,0 +1,1395 @@
+/* Оформление в духе игровых оверлеев: тёмное стекло, один яркий акцент,
+   карточки вместо полосок. Прежний вид — латунь с тёмно-синим, срезанный
+   угол, версальные подписи в разрядку — читался плохо: подпись ряда жила
+   отдельной колонкой слева, а девять рядов подряд не давали понять, что
+   здесь главное. */
+
+/* ------------------------------------------------------------------ */
+/* полоса прокрутки                                                     */
+/* ------------------------------------------------------------------ */
+
+/* Своя, а не системная. Родная полоса в окнах приходит светлой, со
+   стрелками по краям, и посреди тёмной панели выглядит так, будто её
+   приклеили из другой программы. */
+html { color-scheme: dark; }
+
+::-webkit-scrollbar { width: 11px; height: 11px; }
+
+::-webkit-scrollbar-track { background: transparent; }
+
+::-webkit-scrollbar-thumb {
+    /* Полоса не касается краёв: прозрачная рамка с обрезкой по ней
+       оставляет воздух, иначе ползунок липнет к содержимому. */
+    background: rgba(255, 255, 255, 0.13);
+    background-clip: padding-box;
+    border: 3px solid transparent;
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.24);
+    background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner { background: transparent; }
+
+:root {
+    /* Подложка: почти чёрное стекло, чтобы поверх любой сцены игры
+       оставалось читаемым, но не выглядело сплошной заливкой. */
+    --glass:      rgba(17, 20, 27, 0.94);
+    --glass-top:  rgba(30, 35, 46, 0.94);
+    --card:       rgba(255, 255, 255, 0.035);
+    --card-lift:  rgba(255, 255, 255, 0.06);
+    --slot-bg:    #0c0f15;
+
+    --line:       rgba(255, 255, 255, 0.07);
+    --line-soft:  rgba(255, 255, 255, 0.045);
+
+    /* Один акцент на всю панель. Всё, что выделено им, — то, на что
+       игрок должен смотреть: выбранная позиция, активная карточка. */
+    --accent:     #4c9dff;
+    --accent-dim: rgba(76, 157, 255, 0.18);
+    --accent-lit: #8cc2ff;
+
+    /* Золото — жёлтое, как в самой игре; время — холодное. Разные вещи
+       должны быть разного цвета, иначе цифры под иконками сливаются. */
+    --gold:       #f0b429;
+    --time:       #5fb8cf;
+    --good:       #57d08a;
+
+    --text:       #e6eaf0;
+    --muted:      #9aa4b2;
+    --faint:      #6b7684;
+
+    --slot:       48px;
+    --slot-lg:    64px;
+    --radius:     10px;
+}
+
+* { box-sizing: border-box; }
+
+/* Спрятанное обязано прятаться. Собственный display у блока сильнее
+   встроенного правила для атрибута hidden, и ряды с display:flex
+   оставались на экране: не работал ни краткий вид, ни «что показывать»
+   в настройках. */
+[hidden] { display: none !important; }
+
+body {
+    margin: 0;
+    background: #0b0e13;
+    color: var(--text);
+    font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.35;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* В приложении окно прозрачное, и подложку рисует только сама панель. */
+body.app { background: transparent; }
+
+/* Ширину задаёт панель, а окно подстраивается под неё. Без этого они
+   сжимали друг друга: окно ужималось по панели, панель по окну. */
+body.app .panel { max-width: none; }
+
+body.compact .panel { width: 320px; }
+
+/* Подложка превью: в самой игре окно прозрачное, а здесь нужно на чём-то
+   показать панель, иначе она висит в пустоте. */
+body.preview {
+    background:
+        radial-gradient(120% 90% at 30% 0%, #1d2530 0%, #0a0d12 60%, #06080b 100%);
+    padding: 34px 16px 48px;
+    display: flex;
+    justify-content: center;
+}
+
+/* ------------------------------------------------------------------ */
+/* панель                                                              */
+/* ------------------------------------------------------------------ */
+
+/* Сцена держит панель и карточку настроек в одной строке. Окно меряется
+   по ней, а не по панели: иначе настройки вылезали бы за его край. */
+.stage {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: max-content;
+}
+
+body.preview .stage { margin: 0 auto; }
+
+.panel {
+    flex: none;
+    width: 480px;
+    max-width: 100%;
+    position: relative;
+    background: var(--glass);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow:
+        0 24px 60px -20px rgba(0, 0, 0, 0.9),
+        0 2px 10px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+/* ------------------------------------------------------------------ */
+/* шапка                                                               */
+/* ------------------------------------------------------------------ */
+
+.masthead {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--glass-top);
+    border-bottom: 1px solid var(--line);
+}
+
+.portrait {
+    width: 64px;
+    height: 36px;
+    object-fit: cover;
+    display: block;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+}
+
+.titles { min-width: 0; }
+
+.hero-name {
+    font-size: 17px;
+    font-weight: 650;
+    letter-spacing: -0.2px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hero-facts {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: 3px;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.hero-facts > span { white-space: nowrap; }
+.hero-facts b { color: var(--text); font-weight: 600; }
+.hero-facts .dot { color: var(--faint); }
+
+/* Переключатель позиции. Цифры, а не выпадающий список: их пять, они
+   всегда на виду, и выбор — это один клик, а не три. */
+.roles { display: inline-flex; align-items: center; gap: 2px; }
+
+.role {
+    appearance: none;
+    min-width: 20px;
+    height: 19px;
+    padding: 0 5px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid transparent;
+    border-radius: 5px;
+    color: var(--faint);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+    transition: color 0.12s ease, background-color 0.12s ease;
+}
+
+.role:hover { color: var(--text); background: rgba(255, 255, 255, 0.1); }
+.role:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.role.on {
+    color: #0a1220;
+    background: var(--accent);
+    font-weight: 700;
+}
+
+.role-name { margin-left: 3px; color: var(--text); font-weight: 600; }
+
+.role-auto {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    font-size: 9px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--faint);
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    align-self: start;
+}
+
+.ctl {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    color: var(--faint);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 7px;
+    cursor: pointer;
+    transition: color 0.12s ease, background-color 0.12s ease;
+}
+
+.ctl:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); }
+.ctl:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+.ctl.on { color: var(--accent-lit); background: var(--accent-dim); }
+.ctl.danger:hover { color: #ff8a80; background: rgba(255, 138, 128, 0.12); }
+
+.ctl svg { display: block; width: 15px; height: 15px; }
+
+/* Свёрнутая панель — галочка смотрит вверх: нажатие её развернёт. */
+body.compact #fold svg { transform: rotate(180deg); }
+
+/* ------------------------------------------------------------------ */
+/* строка врагов                                                       */
+/* ------------------------------------------------------------------ */
+
+.enemies {
+    display: flex;
+    gap: 6px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.enemy {
+    position: relative;
+    /* Потолок обязателен: пока разведан один враг, без него его портрет
+       растягивался на всю строку. */
+    flex: 1 1 0;
+    max-width: 92px;
+    min-width: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.enemy img {
+    width: 100%;
+    height: 36px;
+    object-fit: cover;
+    display: block;
+    opacity: 0.82;
+    transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.enemy:hover img { opacity: 1; transform: scale(1.04); }
+.enemy:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Лайн-оппонент помечается чертой снизу, а не рамкой: рамка спорила
+   с рамками предметов, а черта читается как подчёркивание. */
+.enemy.lane img { opacity: 1; }
+
+.enemy.lane::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: var(--accent);
+}
+
+/* ------------------------------------------------------------------ */
+/* главный блок: что брать сейчас                                      */
+/* ------------------------------------------------------------------ */
+
+.now {
+    padding: 13px 14px 15px;
+    background:
+        linear-gradient(180deg,
+            var(--accent-dim) 0%, rgba(76, 157, 255, 0) 70%);
+    border-bottom: 1px solid var(--line);
+}
+
+.now-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 11px;
+}
+
+.now-title {
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--text);
+    letter-spacing: -0.1px;
+}
+
+.now-phase {
+    font-size: 11px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.now-items { display: flex; gap: 8px; }
+
+.big {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: help;
+    color: inherit;
+    font-family: inherit;
+}
+
+.big .art {
+    width: 100%;
+    height: var(--slot-lg);
+    object-fit: cover;
+    display: block;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--slot-bg);
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+/* Сколько штук берут — углом поверх иконки, как счётчик в инвентаре. */
+.big .stack {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    padding: 1px 5px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--text);
+    background: rgba(8, 11, 16, 0.88);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+}
+
+.big:hover .art { transform: translateY(-2px); border-color: var(--line); }
+.big:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Предмет, который в этом матче сильнее обычного, — акцентной рамкой. */
+.big.keyed .art { border-color: var(--accent); }
+
+.big .name {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text);
+    text-align: center;
+    line-height: 1.25;
+}
+
+.big .meta {
+    display: flex;
+    gap: 7px;
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.gold  { color: var(--gold); }
+.clock { color: var(--time); }
+
+/* Доля игр — не время: свой цвет, чтобы их не путали между рядами. */
+.part  { color: var(--muted); }
+
+/* ------------------------------------------------------------------ */
+/* карточки                                                            */
+/* ------------------------------------------------------------------ */
+
+/* Каждый раздел — карточка с собственным заголовком. Прежде подпись
+   жила отдельной колонкой слева и обрезалась, а сами разделы ничем не
+   отделялись друг от друга и читались как одна длинная лента. */
+
+.rows {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px 12px;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    background: none;
+    border: 0;
+    color: inherit;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.card-head:hover { background: var(--card-lift); }
+.card-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.card-meta {
+    font-size: 11px;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Галочка сворачивания прижата вправо и поворачивается — так видно,
+   что заголовок вообще нажимается. */
+/* Галочка нарисована рамками, а не символом: типографские стрелки
+   есть не в каждом шрифте, и в Inter она вырождалась в точку. */
+.card-chev {
+    margin-left: auto;
+    width: 7px;
+    height: 7px;
+    flex: none;
+    border-right: 1.5px solid var(--faint);
+    border-bottom: 1.5px solid var(--faint);
+    transform: rotate(45deg) translate(-2px, -2px);
+    transition: transform 0.15s ease, border-color 0.12s ease;
+}
+
+.card-head:hover .card-chev {
+    border-right-color: var(--text);
+    border-bottom-color: var(--text);
+}
+
+.card.folded .card-chev { transform: rotate(-45deg); }
+.card.folded .card-body { display: none; }
+
+.card-body { padding: 2px 10px 10px; }
+
+.strip { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: help;
+    color: inherit;
+    font-family: inherit;
+}
+
+.cell .art {
+    width: var(--slot);
+    height: var(--slot);
+    object-fit: cover;
+    display: block;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: var(--slot-bg);
+    transition: transform 0.13s ease, border-color 0.13s ease;
+}
+
+.cell:hover .art { transform: translateY(-2px); }
+.cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.cell.keyed .art { border-color: var(--accent); }
+
+/* Уже купленное гасим, но не прячем: видно, что совет учтён. */
+.cell.owned .art { opacity: 0.35; }
+.cell.owned:hover .art { opacity: 0.6; }
+
+.cell .tick {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--time);
+    font-variant-numeric: tabular-nums;
+}
+
+.cell .tick.count { color: var(--muted); }
+.cell .tick.share { color: var(--muted); }
+
+/* Предмет без картинки: ровная плашка в штриховку вместо значка
+   «битое изображение». Название всё равно есть в подсказке. */
+.art.nopic {
+    background:
+        repeating-linear-gradient(135deg,
+            #0c1016 0px, #0c1016 6px,
+            #141a23 6px, #141a23 12px);
+}
+
+/* ------------------------------------------------------------------ */
+/* прокачка                                                            */
+/* ------------------------------------------------------------------ */
+
+.skills { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.skill {
+    position: relative;
+    display: block;
+    padding: 0;
+    background: none;
+    border: 0;
+    cursor: help;
+}
+
+.skill img {
+    width: var(--slot);
+    height: var(--slot);
+    object-fit: cover;
+    display: block;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: var(--slot-bg);
+}
+
+.skill.ult img { border-color: var(--gold); }
+.skill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.skill .key {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 1px 0 2px;
+    border-radius: 0 0 6px 6px;
+    background: rgba(8, 11, 16, 0.82);
+    font-size: 9px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--muted);
+}
+
+.skill.ult .key { color: var(--gold); }
+
+/* ------------------------------------------------------------------ */
+/* таланты                                                             */
+/* ------------------------------------------------------------------ */
+
+.talents { display: flex; flex-direction: column; gap: 4px; }
+
+.talent {
+    display: grid;
+    grid-template-columns: 26px 54px 1fr;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.talent .lvl {
+    color: var(--gold);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.talent .side {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--accent-lit);
+}
+
+.talent .side.none { color: var(--faint); }
+.talent .what { color: var(--text); }
+.talent.stale .what { color: var(--faint); }
+.talent .stale-note { color: var(--faint); font-size: 10px; }
+
+/* ------------------------------------------------------------------ */
+/* низ панели                                                          */
+/* ------------------------------------------------------------------ */
+
+.footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    padding: 9px 14px 11px;
+    border-top: 1px solid var(--line-soft);
+    font-size: 10px;
+    color: var(--faint);
+}
+
+.footer span { display: inline-flex; align-items: center; gap: 5px; }
+
+.swatch {
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+    border: 1px solid var(--accent);
+}
+
+/* ------------------------------------------------------------------ */
+/* настройки — вторая сторона панели, а не отдельное окно              */
+/* ------------------------------------------------------------------ */
+
+/* Настройки — отдельная карточка сбоку. Раньше они подменяли собой
+   содержимое панели, и увидеть, что делают ползунки, было нельзя. */
+.sheet {
+    flex: none;
+    width: 290px;
+    align-self: flex-start;
+    padding: 14px 16px 16px;
+    background: var(--glass);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow:
+        0 24px 60px -20px rgba(0, 0, 0, 0.9),
+        0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.sheet-title { font-size: 14px; font-weight: 650; color: var(--text); }
+
+.field { margin-bottom: 16px; }
+
+.field-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 7px;
+}
+
+.field-name { font-size: 12px; color: var(--muted); }
+
+.field-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+
+input[type="range"] {
+    appearance: none;
+    width: 100%;
+    height: 18px;
+    background: none;
+    cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background:
+        linear-gradient(90deg,
+            var(--accent) 0 var(--pct, 50%),
+            rgba(255, 255, 255, 0.1) var(--pct, 50%) 100%);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
+    border-radius: 50%;
+    background: #fff;
+    border: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.blocks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 12px;
+}
+
+.blocks label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 0;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.blocks input {
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    flex: none;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+}
+
+/* Галочка нарисована фоном: у отключённого appearance псевдоэлементы
+   у input ведут себя по-разному, а сплошная заливка без знака читалась
+   как «залито», а не как «включено». */
+.blocks input:checked {
+    background: var(--accent)
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M2.5 6.2 L4.8 8.5 L9.5 3.6' fill='none' stroke='%230a1220' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>")
+        center / 11px 11px no-repeat;
+    border-color: var(--accent);
+}
+
+.blocks input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.blocks label:has(input:checked) { color: var(--text); }
+
+.sheet-foot { display: flex; gap: 8px; }
+
+.btn {
+    appearance: none;
+    flex: 1 1 0;
+    padding: 9px 12px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.12s ease, background-color 0.12s ease;
+}
+
+.btn:hover { color: var(--text); background: rgba(255, 255, 255, 0.1); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.btn.primary {
+    flex: none;
+    border-color: transparent;
+    background: var(--accent);
+    color: #0a1220;
+}
+
+.btn.primary:hover { background: var(--accent-lit); }
+
+/* ------------------------------------------------------------------ */
+/* подсказка под курсором                                              */
+/* ------------------------------------------------------------------ */
+
+.tip {
+    position: fixed;
+    z-index: 30;
+    pointer-events: none;
+    padding: 6px 9px;
+    border-radius: 6px;
+    background: #10141b;
+    border: 1px solid var(--line);
+    box-shadow: 0 10px 26px -8px rgba(0, 0, 0, 0.9);
+    font-size: 11px;
+    color: var(--text);
+    max-width: 280px;
+    opacity: 0;
+    transform: translateY(3px);
+    transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.tip.show { opacity: 1; transform: translateY(0); }
+.tip .price { color: var(--gold); }
+.tip .when  { color: var(--time); }
+
+/* «Зачем» и «против кого» — отдельными строками под первой: они
+   отвечают на другой вопрос, чем цена и тайминг, и в одну строку через
+   точку читались как продолжение цифр. */
+.tip .tip-role,
+.tip .tip-why {
+    display: block;
+    margin-top: 4px;
+    font-size: 10.5px;
+    line-height: 1.35;
+}
+
+.tip .tip-role { color: var(--text); }
+.tip .tip-why  { color: var(--accent-lit); }
+
+/* ------------------------------------------------------------------ */
+/* ситуативное: строки с объяснением, а не ряд иконок                  */
+/* ------------------------------------------------------------------ */
+
+.why { display: flex; flex-direction: column; gap: 6px; }
+
+.why-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 5px;
+    border: 0;
+    border-radius: 6px;
+    background: var(--card);
+    text-align: left;
+    cursor: help;
+    color: inherit;
+    font-family: inherit;
+}
+
+.why-row:hover { background: var(--card-lift); }
+
+.why-art {
+    width: calc(var(--slot) * 0.85);
+    border-radius: 4px;
+    background: var(--slot-bg);
+    flex: none;
+}
+
+.why-text { min-width: 0; }
+
+.why-name {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.why-tag {
+    margin-left: 6px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 9.5px;
+    font-weight: 600;
+    color: var(--faint);
+    background: var(--card-lift);
+}
+
+.why-role {
+    font-size: 10.5px;
+    color: var(--muted);
+}
+
+.why-who {
+    font-size: 10.5px;
+    color: var(--accent-lit);
+}
+
+/* Пока матча нет, показывать нечего, кроме самой шапки: портрет
+   пустой герой не заполнит, а кнопки нужны.
+
+   Колонки при этом переопределяем: убранный портрет освобождает первую
+   колонку, и кнопки съезжали с правого края в середину шапки. */
+.masthead.idle { grid-template-columns: 1fr auto; }
+.masthead.idle .portrait { display: none; }
+.masthead.idle .hero-name { color: var(--muted); font-size: 15px; }
+
+.waiting {
+    padding: 20px 16px 22px;
+    text-align: center;
+    color: var(--faint);
+    font-size: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+}
+
+/* ------------------------------------------------------------------ */
+/* справочник — отдельное окно, а не оверлей                           */
+/* ------------------------------------------------------------------ */
+
+/* Здесь нет прозрачности и поверх-игры: это обычное окно, в котором
+   смотрят статистику между матчами. Поэтому вместо лент со значками —
+   таблицы с названиями и числами: места хватает. */
+
+body.browse {
+    background: #0b0e13;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: var(--glass-top);
+    border-bottom: 1px solid var(--line);
+    flex: none;
+}
+
+.top-title { font-size: 14px; font-weight: 650; color: var(--text); }
+
+.search {
+    flex: 1 1 auto;
+    max-width: 340px;
+    padding: 7px 11px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.search::placeholder { color: var(--faint); }
+.search:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+.source { margin-left: auto; font-size: 11px; color: var(--faint); }
+.source b { color: var(--muted); font-weight: 600; }
+.source a { color: var(--accent); text-decoration: none; }
+.source a:hover { text-decoration: underline; }
+
+.split { display: flex; flex: 1 1 auto; min-height: 0; }
+
+.roster {
+    flex: none;
+    width: 250px;
+    overflow-y: auto;
+    padding: 8px;
+    border-right: 1px solid var(--line);
+}
+
+.pick {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 5px 7px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.pick:hover { background: var(--card-lift); color: var(--text); }
+.pick:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pick.on { background: var(--accent-dim); color: var(--text); }
+
+.pick-art {
+    width: 42px;
+    height: 24px;
+    flex: none;
+    object-fit: cover;
+    border-radius: 4px;
+    background: var(--slot-bg);
+}
+
+.pick-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.guide { flex: 1 1 auto; overflow-y: auto; padding: 14px 16px 24px; }
+
+.empty {
+    padding: 40px 16px;
+    text-align: center;
+    color: var(--faint);
+    font-size: 13px;
+}
+
+.guide-page { display: flex; flex-direction: column; gap: 10px; max-width: 760px; }
+
+.guide-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 4px;
+}
+
+.guide-art {
+    width: 84px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: var(--slot-bg);
+}
+
+.guide-name {
+    font-size: 19px;
+    font-weight: 650;
+    color: var(--text);
+    text-transform: capitalize;
+}
+
+.guide-facts {
+    display: flex;
+    gap: 8px;
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.guide-facts b { color: var(--text); }
+.guide-head .roles { margin-left: auto; flex-wrap: wrap; gap: 4px; }
+.guide-head .role { height: auto; padding: 4px 9px; font-size: 12px; }
+
+/* Заголовок карточки, который ничего не сворачивает. */
+.card-head.static { cursor: default; }
+.card-head.static:hover { background: none; }
+
+.grid { display: flex; flex-direction: column; }
+
+.grid-row {
+    display: grid;
+    grid-template-columns: 34px 1fr repeat(3, 84px);
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.grid-row:last-child { border-bottom: 0; }
+
+.grid-head {
+    padding-bottom: 6px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--faint);
+}
+
+.grid-head:hover { background: none; }
+
+.grid-art {
+    width: 34px;
+    height: 34px;
+    object-fit: cover;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background: var(--slot-bg);
+}
+
+.grid-name { font-size: 13px; color: var(--text); }
+
+.grid-note {
+    margin-left: 7px;
+    font-size: 11px;
+    color: var(--faint);
+}
+
+.grid .num {
+    text-align: right;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.browse .skill img { width: 44px; height: 44px; }
+
+/* Одиночная галочка в настройках — не из сетки «что показывать». */
+.switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.switch input {
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    flex: none;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+}
+
+.switch input:checked {
+    background: var(--accent)
+        url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'>\
+<path d='M2.5 6.2 L4.8 8.5 L9.5 3.6' fill='none' stroke='%230a1220' \
+stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>")
+        center / 11px 11px no-repeat;
+    border-color: var(--accent);
+}
+
+.switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.switch:has(input:checked) { color: var(--text); }
+
+/* Откуда взяты цифры. STRATZ просит об упоминании — и это честно. */
+.credit { margin-left: auto; color: var(--faint); }
+
+/* Переключатель «герои / предметы» в справочнике. */
+.modes { display: flex; gap: 2px; flex: none; }
+
+.mode {
+    appearance: none;
+    padding: 6px 12px;
+    border: 0;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--faint);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mode:hover { color: var(--text); background: rgba(255, 255, 255, 0.1); }
+.mode:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mode.on { background: var(--accent); color: #0a1220; }
+
+.pick-item {
+    width: 34px;
+    height: 34px;
+    flex: none;
+    object-fit: cover;
+    border-radius: 5px;
+    background: var(--slot-bg);
+}
+
+/* Сколько сборок знает про предмет — прижато вправо, мелко. */
+.pick-tail {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+}
+
+.guide-art.item { width: 64px; height: 48px; object-fit: contain; }
+.grid-art.hero { width: 34px; height: 20px; }
+
+.grid-role { font-size: 12px; color: var(--muted); }
+
+.grid .num.up   { color: var(--good); }
+.grid .num.down { color: #e07b6a; }
+
+/* Пояснение вместо пустого места: почему по предмету ничего нет. */
+.notice {
+    padding: 14px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--line-soft);
+    background: var(--card);
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+    max-width: 560px;
+}
+
+.notice-head {
+    margin-bottom: 5px;
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--text);
+}
+
+/* ------------------------------------------------------------------ */
+/* главное меню — то, что видно, когда приложение просто запущено      */
+/* ------------------------------------------------------------------ */
+
+body.menu { background: #0b0e13; }
+
+.home {
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 26px 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.home-head { display: flex; align-items: center; gap: 14px; }
+
+.home-name {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    color: var(--text);
+}
+
+.home-sub {
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ */
+/* карточка «Дота ещё не отдаёт данные»                                */
+/* ------------------------------------------------------------------ */
+
+/* Она стоит выше всего остального и выглядит как предупреждение, а не
+   как ещё один раздел: пока её условия не выполнены, всё остальное в
+   приложении бесполезно. */
+.setup {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 13px 15px;
+    border-radius: 8px;
+    border: 1px solid rgba(240, 180, 41, 0.35);
+    background: rgba(240, 180, 41, 0.07);
+}
+
+.setup-head {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gold);
+}
+
+.setup-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: 12px;
+}
+
+.setup-mark {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    margin-top: 1px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 16px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #0a1220;
+    background: var(--gold);
+}
+
+.setup-step.ok .setup-mark { background: var(--good); }
+
+.setup-step-name { color: var(--text); font-weight: 600; }
+
+.setup-step-note {
+    margin-top: 3px;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--muted);
+}
+
+.setup-step-note.faint {
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+}
+
+.setup-step-note b { color: var(--accent-lit); }
+
+.setup-btn { margin-top: 7px; }
+
+.setup-tail { font-size: 11px; color: var(--faint); }
+
+.state {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--line-soft);
+    background: var(--card);
+}
+
+.state-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 12px;
+    color: var(--faint);
+}
+
+.state-row.ok { color: var(--text); }
+
+.state-dot {
+    width: 7px;
+    height: 7px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--faint);
+}
+
+.state-row.ok .state-dot { background: var(--good); }
+
+.tiles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.tile {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 14px 16px;
+    border-radius: 9px;
+    border: 1px solid var(--line-soft);
+    background: var(--card);
+    color: inherit;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.13s ease, border-color 0.13s ease;
+}
+
+.tile:hover { background: var(--card-lift); border-color: var(--line); }
+.tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.tile.wide {
+    grid-column: 1 / -1;
+    background: var(--accent);
+    border-color: transparent;
+}
+
+.tile.wide .tile-name { color: #0a1220; font-size: 15px; }
+.tile.wide .tile-note { color: rgba(10, 18, 32, 0.7); }
+.tile.wide:hover { background: var(--accent-lit); }
+
+.tile-name { font-size: 13px; font-weight: 650; color: var(--text); }
+.tile-note { font-size: 11px; color: var(--faint); }
+
+.tile.quit:hover { border-color: rgba(255, 138, 128, 0.4); }
+.tile.quit .tile-name { color: var(--muted); }
+
+.home-foot { font-size: 11px; color: var(--faint); text-align: center; }
+.home-foot a { color: var(--accent); text-decoration: none; }
+.home-foot a:hover { text-decoration: underline; }
+
+/* Настройки, открытые из главного меню: панели за ними нет. */
+body.solo #panel { display: none; }
+body.solo .stage { gap: 0; }
+
+/* ------------------------------------------------------------------ */
+/* выделение текста                                                    */
+/* ------------------------------------------------------------------ */
+
+/* Это приложение, а не страница: протаскивание мышью должно двигать
+   окно и нажимать кнопки, а не закрашивать половину интерфейса синим.
+   Выделять оставляем там, где текст правда могут копировать. */
+body {
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: default;
+}
+
+input,
+textarea,
+.grid,
+.notice,
+.talents {
+    -webkit-user-select: text;
+    user-select: text;
+}

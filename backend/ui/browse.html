@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Dota2Helper — справочник</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/app-icon.png">
+</head>
+<body class="browse">
+
+<header class="top">
+    <div class="top-title">справочник</div>
+
+    <!-- Два разреза одних и тех же данных: «что собирают на герое» и
+         «кто вообще берёт этот предмет». -->
+    <div class="modes">
+        <button class="mode on" id="mode-heroes" type="button">герои</button>
+        <button class="mode" id="mode-items" type="button">предметы</button>
+    </div>
+
+    <input class="search" id="search" type="search" autocomplete="off"
+           placeholder="найти по имени">
+
+    <div class="source" id="source"></div>
+</header>
+
+<main class="split">
+    <!-- Слева весь список героев: искать удобно, но и просто листать
+         глазами тоже должно быть можно. -->
+    <nav class="roster" id="roster"></nav>
+
+    <section class="guide" id="guide">
+        <div class="empty" id="empty">выбери героя слева</div>
+        <div id="sheetview" hidden></div>
+    </section>
+</main>
+
+<div class="tip" id="tip"></div>
+
+<script>
+(function () {
+    "use strict";
+
+    var ROLES = {
+        POSITION_1: ["керри", "лёгкая линия"],
+        POSITION_2: ["мид", "средняя линия"],
+        POSITION_3: ["оффлейн", "сложная линия"],
+        POSITION_4: ["роумер", "поддержка на сложной"],
+        POSITION_5: ["саппорт", "поддержка на лёгкой"]
+    };
+
+    function el(tag, cls, text) {
+        var node = document.createElement(tag);
+        if (cls) { node.className = cls; }
+        if (text !== undefined) { node.textContent = text; }
+        return node;
+    }
+
+    function icon(kind, name) {
+        return name ? "/icons/" + kind + "/" + name + ".png" : "";
+    }
+
+    /* Картинка с запасным видом: у рецептов своих иконок нет. */
+    function artwork(kind, name, cls) {
+        var art = el("img", cls);
+        art.alt = "";
+        art.addEventListener("error", function () {
+            art.removeAttribute("src");
+            art.classList.add("nopic");
+        });
+        art.src = icon(kind, name);
+        return art;
+    }
+
+    function minutes(seconds) {
+        return Math.round(seconds / 60) + " мин";
+    }
+
+    /* Число матчей читается только с разрядами: 70453 глазами не берётся. */
+    function count(value) {
+        return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    }
+
+    /* Номер версии у STRATZ — внутренний («182»), игроку он ничего не
+       говорит и путается с патчем Доты. Дата сбора понятнее. */
+    function when(stamp) {
+        if (!stamp) { return "неизвестно"; }
+
+        return new Date(stamp * 1000).toLocaleDateString("ru-RU", {
+            day: "numeric", month: "long", year: "numeric"
+        });
+    }
+
+    /* ---------------- подсказка ---------------- */
+
+    var tip = document.getElementById("tip");
+
+    function bindTip(node, html) {
+        node.addEventListener("mousemove", function (event) {
+            tip.innerHTML = html;
+            tip.classList.add("show");
+            var box = tip.getBoundingClientRect();
+            var x = Math.min(event.clientX + 14, window.innerWidth - box.width - 8);
+            var y = Math.max(8, event.clientY - box.height - 12);
+            tip.style.left = x + "px";
+            tip.style.top = y + "px";
+        });
+        node.addEventListener("mouseleave", function () {
+            tip.classList.remove("show");
+        });
+    }
+
+    /* ---------------- список героев ---------------- */
+
+    var roster = document.getElementById("roster");
+    var search = document.getElementById("search");
+
+    var heroes = [];
+    var items = [];
+    var mode = "heroes";
+    var chosen = null;
+    var chosenItem = null;
+    var position = null;
+
+    function drawRoster() {
+        var needle = search.value.trim().toLowerCase();
+
+        roster.innerHTML = "";
+
+        if (mode === "items") { drawItems(needle); return; }
+
+        heroes.filter(function (hero) {
+            return !needle
+                || hero.display.toLowerCase().indexOf(needle) >= 0
+                || hero.hero.indexOf(needle) >= 0;
+        }).forEach(function (hero) {
+            var cell = el("button", "pick" + (hero.hero === chosen ? " on" : ""));
+            cell.type = "button";
+            cell.appendChild(artwork("heroes", hero.hero, "pick-art"));
+            cell.appendChild(el("span", "pick-name", hero.display));
+
+            cell.addEventListener("click", function () {
+                chosen = hero.hero;
+                // Новый герой — позицию выбираем заново, по его данным.
+                position = null;
+                drawRoster();
+                load();
+            });
+
+            roster.appendChild(cell);
+        });
+
+        if (!roster.children.length) {
+            roster.appendChild(el("div", "empty", "никого не нашлось"));
+        }
+    }
+
+    function drawItems(needle) {
+        items.filter(function (item) {
+            return !needle
+                || item.display.toLowerCase().indexOf(needle) >= 0
+                || item.item.indexOf(needle) >= 0;
+        }).slice(0, 400).forEach(function (item) {
+            var cell = el("button", "pick" + (item.item === chosenItem ? " on" : ""));
+            cell.type = "button";
+            cell.appendChild(artwork("items", item.item, "pick-item"));
+            cell.appendChild(el("span", "pick-name", item.display));
+
+            // Сразу видно, есть ли по предмету вообще что показывать.
+            cell.appendChild(el("span", "pick-tail",
+                item.guides ? item.guides + " сб." : "—"));
+
+            cell.addEventListener("click", function () {
+                chosenItem = item.item;
+                drawRoster();
+                loadItem();
+            });
+
+            roster.appendChild(cell);
+        });
+
+        if (!roster.children.length) {
+            roster.appendChild(el("div", "empty", "ничего не нашлось"));
+        }
+    }
+
+    function setMode(next) {
+        mode = next;
+
+        document.getElementById("mode-heroes").classList.toggle("on", next === "heroes");
+        document.getElementById("mode-items").classList.toggle("on", next === "items");
+
+        search.placeholder = next === "items"
+            ? "предмет: найти по имени"
+            : "герой: найти по имени";
+
+        search.value = "";
+        search.focus();
+
+        empty.textContent = next === "items"
+            ? "выбери предмет слева"
+            : "выбери героя слева";
+        empty.hidden = false;
+        view.hidden = true;
+
+        drawRoster();
+    }
+
+    document.getElementById("mode-heroes").addEventListener("click", function () {
+        setMode("heroes");
+    });
+
+    document.getElementById("mode-items").addEventListener("click", function () {
+        setMode("items");
+    });
+
+    search.addEventListener("input", drawRoster);
+
+    /* ---------------- гайд ---------------- */
+
+    var view = document.getElementById("sheetview");
+    var empty = document.getElementById("empty");
+
+    function load() {
+        var url = "/guide?hero=" + encodeURIComponent(chosen)
+            + (position ? "&position=" + encodeURIComponent(position) : "");
+
+        fetch(url, { cache: "no-store" })
+            .then(function (answer) { return answer.json(); })
+            .then(draw)
+            .catch(function (error) {
+                console.error(error);
+                show(el("div", "empty", "не получилось загрузить"));
+            });
+    }
+
+    function show(node) {
+        empty.hidden = true;
+        view.hidden = false;
+        view.innerHTML = "";
+        view.appendChild(node);
+    }
+
+    function positions(state) {
+        var box = el("div", "roles");
+
+        (state.positions || []).forEach(function (entry) {
+            var digit = entry.position.replace("POSITION_", "");
+            var role = ROLES[entry.position] || [digit, ""];
+            var on = entry.position === state.position;
+
+            var cell = el("button", "role" + (on ? " on" : ""), digit + " · " + role[0]);
+            cell.type = "button";
+
+            bindTip(cell, role[1] + " &middot; " + entry.matches + " игр");
+
+            cell.addEventListener("click", function () {
+                position = entry.position;
+                load();
+            });
+
+            box.appendChild(cell);
+        });
+
+        return box;
+    }
+
+    /* Таблица вместо ленты значков: здесь есть место под названия и
+       числа, а вопрос «что, когда и в скольких играх» — это именно
+       колонки, а не иконки подряд. */
+    function table(entries, columns) {
+        var box = el("div", "grid");
+
+        // Колонок бывает две или три — раскладку задаём по месту.
+        var template = "34px 1fr repeat(" + columns.length + ", 84px)";
+
+        function row(cls) {
+            var node = el("div", cls);
+            node.style.gridTemplateColumns = template;
+            return node;
+        }
+
+        var head = row("grid-row grid-head");
+        head.appendChild(el("span", "", ""));
+        head.appendChild(el("span", "", "предмет"));
+        columns.forEach(function (column) {
+            head.appendChild(el("span", "num", column[0]));
+        });
+        box.appendChild(head);
+
+        entries.forEach(function (entry) {
+            var line = row("grid-row");
+
+            line.appendChild(artwork("items", entry.item, "grid-art"));
+
+            var name = el("span", "grid-name", entry.display || entry.item);
+
+            if (entry.alt_to) {
+                name.appendChild(el("span", "grid-note",
+                    "вместо " + entry.alt_to));
+            }
+
+            // Зачем предмет нужен. Для половины списка это очевидно, для
+            // второй половины — единственное, что отличает совет от
+            // списка картинок.
+            if (entry.role) {
+                name.appendChild(el("span", "grid-note", entry.role));
+            }
+
+            line.appendChild(name);
+
+            columns.forEach(function (column) {
+                line.appendChild(el("span", "num " + (column[2] || ""),
+                    column[1](entry)));
+            });
+
+            box.appendChild(line);
+        });
+
+        return box;
+    }
+
+    function block(title, meta, body) {
+        var card = el("section", "card");
+        var head = el("div", "card-head static");
+        head.appendChild(el("span", "card-title", title));
+        if (meta) { head.appendChild(el("span", "card-meta", meta)); }
+        card.appendChild(head);
+        var inner = el("div", "card-body");
+        inner.appendChild(body);
+        card.appendChild(inner);
+        return card;
+    }
+
+    function draw(state) {
+        if (state.error) {
+            show(el("div", "empty", state.error));
+            return;
+        }
+
+        position = state.position;
+
+        var page = el("div", "guide-page");
+
+        var head = el("div", "guide-head");
+        head.appendChild(artwork("heroes", state.hero, "guide-art"));
+
+        var titles = el("div");
+        // Технического имени («nevermore») игрок не знает — движок
+        // присылает человеческое рядом.
+        titles.appendChild(el("div", "guide-name",
+            state.hero_display || state.hero));
+
+        var facts = el("div", "guide-facts");
+        var wr = el("span");
+        wr.innerHTML = "<b>" + state.winrate + "%</b> побед";
+        facts.appendChild(wr);
+        facts.appendChild(el("span", "dot", "·"));
+        facts.appendChild(el("span", null, state.matches + " игр"));
+        titles.appendChild(facts);
+
+        head.appendChild(titles);
+        head.appendChild(positions(state));
+        page.appendChild(head);
+
+        var purchase = state.starting_purchase || {};
+
+        if ((purchase.items || []).length) {
+            page.appendChild(block(
+                "стартовая закупка",
+                purchase.total + " / " + purchase.budget + " золота",
+                table(purchase.items, [
+                    ["штук", function (e) { return e.count > 1 ? "×" + e.count : "1"; }],
+                    ["золота", function (e) { return e.cost * (e.count || 1); }, "gold"]
+                ])
+            ));
+        }
+
+        [["early", "ранняя игра"], ["core", "основной закуп"], ["late", "поздняя игра"]]
+            .forEach(function (pair) {
+                var entries = state[pair[0]] || [];
+
+                if (!entries.length) { return; }
+
+                // Заголовок фазы без времени ничего не говорит: «ранняя
+                // игра» у кэрри и у саппорта — разные минуты.
+                var times = entries.map(function (e) { return e.median_time; })
+                                   .filter(Boolean);
+
+                var when = times.length
+                    ? Math.round(Math.min.apply(null, times) / 60) + "–"
+                      + Math.round(Math.max.apply(null, times) / 60) + " мин"
+                    : null;
+
+                page.appendChild(block(pair[1], when,
+                    table(entries, [
+                        ["% игр", function (e) { return e.share + "%"; }, "part"],
+                        ["берут к", function (e) {
+                            return e.median_time ? minutes(e.median_time) : "—";
+                        }, "clock"],
+                        ["золота", function (e) { return e.cost || "—"; }, "gold"]
+                    ])
+                ));
+            });
+
+        if ((state.consumables || []).length) {
+            page.appendChild(block("расходники и варды", null,
+                table(state.consumables, [
+                    ["% игр", function (e) { return e.share + "%"; }, "part"],
+                    ["берут к", function (e) {
+                        return e.median_time ? minutes(e.median_time) : "—";
+                    }, "clock"]
+                ])
+            ));
+        }
+
+        if ((state.skills || []).length) {
+            var skills = el("div", "skills");
+
+            state.skills.forEach(function (entry, index) {
+                var cell = el("div", "skill" + (entry.mark === "ульт" ? " ult" : ""));
+                cell.appendChild(artwork("abilities", entry.icon, ""));
+                cell.appendChild(el("span", "key", entry.mark || "·"));
+                bindTip(cell, (index + 1) + "-м уровнем &middot; "
+                    + (entry.display || entry.ability));
+                skills.appendChild(cell);
+            });
+
+            page.appendChild(block("порядок прокачки", null, skills));
+        }
+
+        if ((state.talents || []).length) {
+            var talents = el("div", "talents");
+
+            state.talents.forEach(function (entry) {
+                var line = el("div", "talent" + (entry.stale ? " stale" : ""));
+                line.appendChild(el("span", "lvl", entry.level));
+                line.appendChild(el("span", "side" + (entry.side ? "" : " none"),
+                    entry.side || "—"));
+                line.appendChild(el("span", "what", entry.display || entry.talent));
+                talents.appendChild(line);
+            });
+
+            page.appendChild(block("таланты", null, talents));
+        }
+
+        show(page);
+    }
+
+    /* ---------------- предмет: кто его берёт ---------------- */
+
+    var ROLE_SHORT = {
+        POSITION_1: "керри",
+        POSITION_2: "мид",
+        POSITION_3: "оффлейн",
+        POSITION_4: "роумер",
+        POSITION_5: "саппорт"
+    };
+
+    var PHASE = { early: "ранняя", core: "основной закуп", late: "поздняя" };
+
+    function loadItem() {
+        fetch("/item?name=" + encodeURIComponent(chosenItem), { cache: "no-store" })
+            .then(function (answer) { return answer.json(); })
+            .then(drawItem)
+            .catch(function (error) {
+                console.error(error);
+                show(el("div", "empty", "не получилось загрузить"));
+            });
+    }
+
+    function drawItem(state) {
+        if (state.error) {
+            show(el("div", "empty", state.error));
+            return;
+        }
+
+        var page = el("div", "guide-page");
+
+        var head = el("div", "guide-head");
+        head.appendChild(artwork("items", state.item, "guide-art item"));
+
+        var titles = el("div");
+        titles.appendChild(el("div", "guide-name", state.display));
+
+        var facts = el("div", "guide-facts");
+        facts.appendChild(el("span", "gold", state.cost ? state.cost + " золота" : "—"));
+        facts.appendChild(el("span", "dot", "·"));
+        facts.appendChild(el("span", null,
+            state.rows.length + " сборок из " + state.guides));
+        titles.appendChild(facts);
+
+        head.appendChild(titles);
+        page.appendChild(head);
+
+        if (!state.rows.length) {
+            /* Пустой ответ легко прочесть как «предмет не берут никогда».
+               Это не так, и разницу надо назвать вслух. */
+            var none = el("div", "notice");
+            none.appendChild(el("div", "notice-head", "ни в одной сборке"));
+            none.appendChild(el("div", null,
+                "В гайды попадает то, что берут не реже чем в 2% игр, и "
+                + "только там, где на позиции набралось хотя бы 30 матчей. "
+                + "Значит, этот предмет нигде не дотянул до порога, а не "
+                + "то, что его не покупают вовсе."));
+            page.appendChild(none);
+            show(page);
+            return;
+        }
+
+        var box = el("div", "grid");
+        var template = "34px 1fr 90px 84px 84px 84px 84px";
+
+        function row(cls) {
+            var node = el("div", cls);
+            node.style.gridTemplateColumns = template;
+            return node;
+        }
+
+        var header = row("grid-row grid-head");
+        header.appendChild(el("span", "", ""));
+        header.appendChild(el("span", "", "герой"));
+        header.appendChild(el("span", "", "позиция"));
+        ["% игр", "берут к", "винрейт", "к базе"].forEach(function (name) {
+            header.appendChild(el("span", "num", name));
+        });
+        box.appendChild(header);
+
+        state.rows.forEach(function (entry) {
+            var line = row("grid-row");
+
+            line.appendChild(artwork("heroes", entry.short, "grid-art hero"));
+            line.appendChild(el("span", "grid-name", entry.hero));
+            line.appendChild(el("span", "grid-role",
+                ROLE_SHORT[entry.position] || entry.position));
+
+            var share = el("span", "num part", entry.share + "%");
+            bindTip(share, entry.buyers + " из " + entry.of + " игр &middot; "
+                + PHASE[entry.phase]);
+            line.appendChild(share);
+
+            line.appendChild(el("span", "num clock",
+                entry.median_time ? minutes(entry.median_time) : "—"));
+            line.appendChild(el("span", "num", entry.winrate + "%"));
+
+            var lift = el("span",
+                "num " + (entry.lift >= 0 ? "up" : "down"),
+                (entry.lift > 0 ? "+" : "") + entry.lift);
+            bindTip(lift, "насколько винрейт с предметом выше винрейта "
+                + "этого героя вообще. На малых выборках это чаще про то, "
+                + "что игра шла хорошо, чем про сам предмет.");
+            line.appendChild(lift);
+
+            box.appendChild(line);
+        });
+
+        page.appendChild(block("кто берёт", "сверху — те, кто чаще", box));
+
+        show(page);
+    }
+
+    /* ---------------- загрузка ---------------- */
+
+    fetch("/heroes", { cache: "no-store" })
+        .then(function (answer) { return answer.json(); })
+        .then(function (data) {
+            heroes = data.heroes || [];
+
+            document.getElementById("source").innerHTML =
+                "<b>" + count(data.matches) + "</b> матчей &middot; данные от "
+                + when(data.built_at) + " &middot; "
+                + '<a href="https://stratz.com" target="_blank" rel="noopener">STRATZ</a>'
+                + " &middot; by yst4l";
+
+            drawRoster();
+            search.focus();
+
+            return fetch("/items", { cache: "no-store" })
+                .then(function (answer) { return answer.json(); })
+                .then(function (data) { items = data.items || []; });
+        })
+        .catch(function (error) {
+            console.error(error);
+            roster.appendChild(el("div", "empty", "приложение не отвечает"));
+        });
+}());
+</script>
+</body>
+</html>
