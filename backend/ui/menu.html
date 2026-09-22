@@ -8,584 +8,143 @@
 <link rel="stylesheet" href="/windows.css">
 <link rel="icon" href="/app-icon.png">
 </head>
-<body class="menu">
+<body class="shell">
 
-<div class="home">
-    <!-- Шапка с портретом героя. Портрет — из наших же иконок, размытый
-         до фона: показывать в главном окне героя, а не пустой градиент,
-         стоит ровно одну строку кода, а окно сразу перестаёт выглядеть
-         технической утилитой. -->
-    <header class="hero-banner">
-        <!-- Портрет героя справа — тот же, что Valve показывает на сайте
-             игры: 400x250. Мелкая иконка в баннере выглядела мылом, а
-             размытое пятно не читалось как картинка вовсе. -->
-        <div class="hero-art" id="hero-art"></div>
-
-        <div class="hero-text">
-            <h1>Добро пожаловать в Dota2Helper</h1>
-            <p>Подсказка по сборке прямо в игре: что брать следующим,
-               к какой минуте и что меняет вражеский пик.</p>
-
-            <button class="big-btn" id="play" type="button">
-                <span class="big-btn-mark">
-                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.4 12.4 8 5 12.6z" fill="currentColor"/></svg>
-                </span>
-                Запустить Dota 2
-            </button>
-
-            <div class="big-btn-note">Запуск через Steam</div>
-
-            <div class="hero-facts" id="sub">загружаю…</div>
+<!-- Оболочка: слева разделы, справа страница раздела.
+     Плиток на главной больше нет — они означали ровно то же, что и
+     разделы («куда пойти»), и дублировали это меню. -->
+<div class="app">
+    <nav class="side">
+        <div class="side-brand">
+            <img class="side-logo" src="/app-icon.png" alt="">
+            <span>Dota2Helper</span>
         </div>
-    </header>
 
-    <!-- Пока Дота не настроена отдавать данные, приложение молчит и
-         выглядит сломанным. Поэтому первое, что видит человек, — чего
-         не хватает и что с этим сделать. Когда всё на месте, карточки
-         тут нет вовсе. -->
-    <section class="setup" id="setup" hidden></section>
+        <div class="side-nav" id="nav"></div>
 
-    <!-- Обновления: данные и программа отдельно. -->
-    <section class="upd" id="upd" hidden></section>
+        <div class="side-foot">
+            <!-- Короткая сводка: она нужна в любом разделе, а не только
+                 на главной. -->
+            <div class="side-state" id="side-state"></div>
 
-    <div class="tiles">
-        <button class="tile" id="browse" type="button">
-            <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
-            <span class="tile-name">Справочник</span>
-            <span class="tile-note">герои и сборки</span>
-        </button>
+            <div class="side-links">
+                <button class="side-link" id="opts" type="button">Настройки</button>
+                <button class="side-link quit" id="quit" type="button">Выход</button>
+            </div>
+        </div>
+    </nav>
 
-        <button class="tile" id="overlay" type="button">
-            <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="5.6" y="7.6" width="6" height="8.8" rx="1" fill="currentColor" opacity=".55"/></svg></span>
-            <span class="tile-name">Показать панель</span>
-            <span class="tile-note">поверх игры</span>
-        </button>
-
-        <button class="tile" id="opts" type="button">
-            <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
-            <span class="tile-name">Настройки</span>
-            <span class="tile-note">вид и поведение</span>
-        </button>
-
-        <button class="tile" id="about" type="button">
-            <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 11v5.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="7.9" r="1.1" fill="currentColor"/></svg></span>
-            <span class="tile-name">О приложении</span>
-            <span class="tile-note" id="about-note">версия</span>
-        </button>
-    </div>
-
-    <!-- Раскрывается по «О приложении»: в обычном состоянии эти цифры
-         только шумят. -->
-    <section class="about" id="about-card" hidden></section>
-
-    <!-- Строка состояния внизу: почему панель не показывается — игра не
-         запущена или приложение её не слышит. -->
-    <footer class="status" id="state"></footer>
+    <main class="stage">
+        <iframe class="frame" id="frame" title="раздел"></iframe>
+    </main>
 </div>
 
 <script>
 (function () {
     "use strict";
 
-    /* Число матчей читается только с разрядами. */
-    function count(value) {
-        return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-    }
+    /* Разделы. Порядок — от того, зачем приложение открывают чаще. */
+    var SECTIONS = [
+        ["home", "Главная", "/home",
+         "M4 10.5 12 4l8 6.5V20h-5.5v-5h-5v5H4z"],
+        ["browse", "Справочник", "/browse",
+         "M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z"],
+        ["meta", "Мета", "/meta",
+         "M4 19h16M7 16V9.5M12 16V5M17 16v-4.5"],
+        ["counters", "Контрпики", "/counters",
+         "M5.5 5.5 18 18M18 5.5 5.5 18"]
+    ];
 
-    /* Номер версии у STRATZ внутренний и путается с патчем Доты —
-       показываем дату сбора данных. */
-    function when(stamp) {
-        if (!stamp) { return "неизвестно"; }
+    var frame = document.getElementById("frame");
+    var nav = document.getElementById("nav");
 
-        return new Date(stamp * 1000).toLocaleDateString("ru-RU", {
-            day: "numeric", month: "long", year: "numeric"
+    var current = null;
+
+    function open(name) {
+        var found = null;
+
+        SECTIONS.forEach(function (section) {
+            if (section[0] === name) { found = section; }
+        });
+
+        if (!found || current === name) { return; }
+
+        current = name;
+        frame.src = found[2];
+
+        Array.prototype.forEach.call(nav.children, function (node) {
+            node.classList.toggle("on", node.dataset.name === name);
         });
     }
 
+    SECTIONS.forEach(function (section) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "side-item";
+        button.dataset.name = section[0];
+
+        button.innerHTML =
+            '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'
+            + section[3] + '" fill="none" stroke="currentColor"'
+            + ' stroke-width="1.7" stroke-linejoin="round"'
+            + ' stroke-linecap="round"/></svg>'
+            + "<span>" + section[1] + "</span>";
+
+        button.addEventListener("click", function () { open(section[0]); });
+
+        nav.appendChild(button);
+    });
+
+    /* ---------------- мост к приложению ---------------- */
+
+    /* Мост держит оболочка, а страницы разделов берут его отсюда: они
+       лежат в том же окне, просто в рамке. */
     var bridge = null;
 
-    function tell(method, arg) {
-        if (!bridge || !bridge[method]) { return; }
-        if (arg === undefined) { bridge[method](); } else { bridge[method](arg); }
-    }
+    window.__bridge = null;
 
-    function connect(done) {
-        if (!window.qt || !window.qt.webChannelTransport) { done(false); return; }
+    window.__tell = function (method, arg) {
+        if (!bridge || !bridge[method]) { return; }
+
+        if (arg === undefined) { bridge[method](); } else { bridge[method](arg); }
+    };
+
+    function connect() {
+        if (!window.qt || !window.qt.webChannelTransport) { return; }
 
         var script = document.createElement("script");
         script.src = "qrc:///qtwebchannel/qwebchannel.js";
+
         script.onload = function () {
             new QWebChannel(window.qt.webChannelTransport, function (channel) {
                 bridge = channel.objects.app;
-                done(true);
+                window.__bridge = bridge;
+
+                refresh();
             });
         };
-        script.onerror = function () { done(false); };
+
         document.head.appendChild(script);
     }
 
-    document.getElementById("play").addEventListener("click", function () {
-        tell("launchDota");
-    });
-
-    document.getElementById("browse").addEventListener("click", function () {
-        tell("openBrowser");
-    });
-
-    document.getElementById("overlay").addEventListener("click", function () {
-        tell("showOverlay");
-    });
-
     document.getElementById("opts").addEventListener("click", function () {
-        tell("openSettings");
+        window.__tell("openSettings");
     });
 
-    document.getElementById("about").addEventListener("click", function () {
-        var card = document.getElementById("about-card");
-
-        card.hidden = !card.hidden;
-
-        reportHeight();
+    document.getElementById("quit").addEventListener("click", function () {
+        window.__tell("quit");
     });
 
-    /* ---------------- готова ли Дота отдавать данные ---------------- */
+    /* ---------------- состояние в подвале ---------------- */
 
-    var setupBox = document.getElementById("setup");
+    var side = document.getElementById("side-state");
 
-    function step(ok, title, body) {
+    function dot(mark, text) {
         var row = document.createElement("div");
-        row.className = "setup-step" + (ok ? " ok" : "");
-
-        var mark = document.createElement("span");
-        mark.className = "setup-mark";
-        mark.textContent = ok ? "✓" : "!";
-        row.appendChild(mark);
-
-        var text = document.createElement("div");
-
-        var head = document.createElement("div");
-        head.className = "setup-step-name";
-        head.textContent = title;
-        text.appendChild(head);
-
-        if (body) {
-            var note = document.createElement("div");
-            note.className = "setup-step-note";
-            note.innerHTML = body;
-            text.appendChild(note);
-        }
-
-        row.appendChild(text);
-
-        // Дальше в шаг иногда дописывают кнопку и мелкие строки. Класть
-        // их надо в текстовую колонку, а не в саму строку: строка — это
-        // «значок слева, текст справа», и всё, что попадало в неё
-        // напрямую, вставало третьей колонкой сбоку.
-        row.body = text;
+        row.className = "side-dot " + mark;
+        row.innerHTML = "<i></i><span>" + text + "</span>";
 
         return row;
-    }
-
-    function drawSetup(now) {
-        /* Пакеты от игры доказывают, что всё работает, лучше любой
-           проверки файлов: если они идут, придираться не к чему. */
-        if (now.ready && !setupForced) {
-            setupBox.hidden = true;
-
-            return;
-        }
-
-        setupBox.hidden = false;
-        setupBox.innerHTML = "";
-
-        setupBox.classList.toggle("fine", !!now.ready);
-
-        var head = document.createElement("div");
-        head.className = "setup-head";
-        head.textContent = now.ready
-            ? "Подключение в порядке"
-            : "Dota ещё не отдаёт данные";
-        setupBox.appendChild(head);
-
-        if (!now.dota_found) {
-            setupBox.appendChild(step(false, "не нашли установленную Dota 2",
-                "проверьте, что игра стоит через Steam на этом компьютере"));
-
-            return;
-        }
-
-        /* Конфиг мы умеем положить сами — это файл в папке игры. */
-        var configNote = now.config_ok
-            ? "лежит в папке игры"
-            : "без него игра не знает, куда слать состояние матча";
-
-        var configStep = step(now.config_ok, "конфиг GSI", configNote);
-
-        if (!now.config_ok) {
-            var button = document.createElement("button");
-            button.className = "btn primary setup-btn";
-            button.type = "button";
-            button.textContent = "установить конфиг";
-
-            button.addEventListener("click", function () {
-                button.disabled = true;
-                button.textContent = "кладу…";
-
-                fetch("/install-config", { method: "POST", body: "{}" })
-                    .then(function (answer) { return answer.json(); })
-                    .then(drawSetup)
-                    .catch(function (error) {
-                        console.error(error);
-                        button.disabled = false;
-                        button.textContent = "не получилось, ещё раз";
-                    });
-            });
-
-            configStep.body.appendChild(button);
-        }
-
-        setupBox.appendChild(configStep);
-
-        /* А параметры запуска — за нас никто: их правит сам Steam, и
-           лезть в его файл при запущенном Steam бесполезно, он перезапишет
-           своё поверх. Поэтому показываем ровно то, что надо сделать. */
-        var launchNote = now.launch_ok
-            ? "уже стоит в параметрах запуска"
-            : "Steam → библиотека → Dota 2 → правая кнопка → Свойства → "
-              + "Параметры запуска → дописать <b>" + now.option + "</b>"
-              + " и перезапустить игру";
-
-        var launchStep = step(now.launch_ok,
-            "параметр запуска " + now.option.replace(/-/g, "‑"),
-            launchNote);
-
-        /* Чужие учётки показываем, только пока параметра нет нигде:
-           когда он уже стоит, список «а вот тут не стоит» — это шум. */
-        if (!now.launch_ok) {
-            (now.accounts || []).forEach(function (account) {
-                var line = document.createElement("div");
-                line.className = "setup-step-note faint";
-                line.textContent = "учётка " + account.account + ": "
-                    + (account.options || "параметров нет");
-                launchStep.body.appendChild(line);
-            });
-        }
-
-        setupBox.appendChild(launchStep);
-
-        var tail = document.createElement("div");
-        tail.className = "setup-tail";
-        tail.textContent = now.ready
-            ? "игра присылала данные — всё работает"
-            : "как только игра пришлёт первый пакет, "
-                + "эта карточка исчезнет сама";
-        setupBox.appendChild(tail);
-    }
-
-    var setupForced = false;
-
-    function checkSetup(force) {
-        if (force) { setupForced = true; }
-
-        fetch("/setup", { cache: "no-store" })
-            .then(function (answer) { return answer.json(); })
-            .then(drawSetup)
-            .catch(function (error) { console.error(error); });
-    }
-
-    checkSetup();
-    setInterval(checkSetup, 5000);
-
-    /* Высота окна — по содержимому: карточка настройки то есть, то нет. */
-    var lastHeight = 0;
-
-    function reportHeight() {
-        if (!bridge || !bridge.fitMenu) { return; }
-
-        var height = Math.ceil(
-            document.querySelector(".home").getBoundingClientRect().height
-        ) + 40;
-
-        if (Math.abs(height - lastHeight) < 4) { return; }
-
-        lastHeight = height;
-
-        bridge.fitMenu(height);
-    }
-
-    if (window.ResizeObserver) {
-        new ResizeObserver(reportHeight).observe(document.querySelector(".home"));
-    }
-
-    /* ---------------- обновления ---------------- */
-
-    var updBox = document.getElementById("upd");
-
-    function updRow(title, note, label, run) {
-        var row = document.createElement("div");
-        row.className = "upd-row";
-
-        var text = document.createElement("div");
-
-        var head = document.createElement("div");
-        head.className = "upd-name";
-        head.textContent = title;
-        text.appendChild(head);
-
-        var sub = document.createElement("div");
-        sub.className = "upd-note";
-        sub.textContent = note;
-        text.appendChild(sub);
-
-        row.appendChild(text);
-
-        var button = document.createElement("button");
-        button.className = "btn primary";
-        button.type = "button";
-        button.textContent = label;
-
-        button.addEventListener("click", function () {
-            button.disabled = true;
-            button.textContent = "качаю…";
-
-            run(button, sub);
-        });
-
-        row.appendChild(button);
-
-        return row;
-    }
-
-    function mb(bytes) {
-        return bytes ? (bytes / 1048576).toFixed(1) + " МБ" : "";
-    }
-
-    function drawUpdates(now) {
-        updBox.innerHTML = "";
-
-        var rows = [];
-
-        if (now.data && now.data.newer) {
-            rows.push(updRow(
-                "Есть свежие данные",
-                "новые матчи и проценты · " + mb(now.data.size),
-                "обновить",
-                function (button, sub) {
-                    fetch("/update-data", { method: "POST", body: "{}" })
-                        .then(function (answer) { return answer.json(); })
-                        .then(function (done) {
-                            if (done.error) { throw new Error(done.error); }
-
-                            button.remove();
-                            sub.textContent = "готово: патч " + done.patch
-                                + ", " + count(done.matches) + " матчей";
-
-                            // Число матчей в шапке уже другое.
-                            loadFacts();
-                        })
-                        .catch(function (error) {
-                            console.error(error);
-                            button.disabled = false;
-                            button.textContent = "ещё раз";
-                        });
-                }
-            ));
-        }
-
-        if (now.app) {
-            rows.push(updRow(
-                "Новая версия " + now.app.version,
-                "у тебя " + now.version + " · " + mb(now.app.size)
-                    + " · программа перезапустится",
-                "обновить",
-                function (button, sub) {
-                    fetch("/update-app", { method: "POST", body: "{}" })
-                        .then(function (answer) { return answer.json(); })
-                        .then(function (done) {
-                            if (done.error) { throw new Error(done.error); }
-
-                            sub.textContent = "установщик запущен";
-                        })
-                        .catch(function (error) {
-                            console.error(error);
-                            button.disabled = false;
-                            button.textContent = "ещё раз";
-                        });
-                }
-            ));
-        }
-
-        if (!rows.length) {
-            updBox.hidden = true;
-
-            return;
-        }
-
-        updBox.hidden = false;
-
-        rows.forEach(function (row) { updBox.appendChild(row); });
-    }
-
-    /* «О приложении»: версия, на чём стоят цифры и куда идти за исходниками.
-       В свёрнутом виде — только номер версии на плитке. */
-    function drawAbout(now) {
-        document.getElementById("about-note").textContent =
-            "версия " + now.version;
-
-        var card = document.getElementById("about-card");
-        var was = card.hidden;
-
-        card.innerHTML =
-            '<div class="about-grid">'
-            + '<div><span>Версия</span><b>' + now.version + '</b></div>'
-            + '<div><span>Патч данных</span><b>' + (now.patch || "—") + '</b></div>'
-            + '<div><span>Матчей разобрано</span><b>'
-            + count(now.matches || 0) + '</b></div>'
-            + '<div><span>Данные собраны</span><b>'
-            + when(now.built_at) + '</b></div>'
-            + '</div>'
-            + '<div class="about-links">'
-            + '<a href="https://github.com/yst4lpizdec/dota2helper" target="_blank" rel="noopener">Исходный код</a>'
-            + '<a href="https://stratz.com/" target="_blank" rel="noopener">Данные — STRATZ</a>'
-            + '</div>';
-
-        var check = document.createElement("button");
-        check.type = "button";
-        check.className = "btn";
-        check.textContent = "проверить обновления";
-
-        check.addEventListener("click", function () {
-            check.disabled = true;
-            check.textContent = "смотрю…";
-
-            checkUpdates(true);
-
-            setTimeout(function () {
-                check.disabled = false;
-                check.textContent = "проверить обновления";
-            }, 2500);
-        });
-
-        card.appendChild(check);
-        card.hidden = was;
-
-        reportHeight();
-    }
-
-    function checkUpdates(force) {
-        fetch("/updates" + (force ? "?force=1" : ""), { cache: "no-store" })
-            .then(function (answer) { return answer.json(); })
-            .then(function (now) {
-                drawUpdates(now);
-
-                drawAbout(now);
-            })
-            .catch(function (error) { console.error(error); });
-    }
-
-    checkUpdates(false);
-
-    /* Портрет в шапке — из наших же иконок, размытый до фона. Герой
-       случайный: окно каждый раз выглядит чуть иначе, а качать что-то
-       ради картинки не приходится. */
-    fetch("/heroes", { cache: "no-store" })
-        .then(function (answer) { return answer.json(); })
-        .then(function (data) {
-            var list = data.heroes || [];
-
-            if (!list.length) { return; }
-
-            /* Герои для шапки выбраны руками: у части портретов в кадре
-               не герой, а облако эффектов — в баннере это выглядит
-               мутным пятном, а не картинкой из игры. */
-            var FACES = [
-                "skeleton_king", "juggernaut", "invoker", "phantom_assassin",
-                "pudge", "antimage", "lina", "axe", "queenofpain",
-                "nevermore", "dragon_knight", "mars", "legion_commander",
-                "templar_assassin", "drow_ranger", "crystal_maiden"
-            ];
-
-            var known = {};
-            list.forEach(function (hero) { known[hero.hero] = true; });
-
-            var faces = FACES.filter(function (name) { return known[name]; });
-
-            if (!faces.length) {
-                faces = list.map(function (hero) { return hero.hero; });
-            }
-
-            /* Картинка есть не у каждого героя — пробуем несколько, а не
-               оставляем пустой баннер из-за одного промаха. */
-            var left = 4;
-
-            function attempt() {
-                if (left-- <= 0) { return; }
-
-                var pick = faces[Math.floor(Math.random() * faces.length)];
-                var url = "/icons/crops/" + pick + ".png";
-
-                var probe = new Image();
-
-                probe.onload = function () {
-                    document.getElementById("hero-art").style.backgroundImage =
-                        "url(" + url + ")";
-                };
-
-                probe.onerror = attempt;
-                probe.src = url;
-            }
-
-            attempt();
-        })
-        .catch(function () {});
-
-    /* ---------------- что сейчас происходит ---------------- */
-
-    var state = document.getElementById("state");
-
-    /* Три состояния вместо двух: серое — «не сейчас», зелёное — «работает»,
-       красное — «сломано и требует внимания». Отсутствие Доты не ошибка:
-       человек может зайти в приложение между играми. */
-    function line(mark, text) {
-        var row = document.createElement("span");
-        row.className = "st-row " + mark;
-
-        var dot = document.createElement("span");
-        dot.className = "st-dot";
-        row.appendChild(dot);
-
-        row.appendChild(document.createTextNode(text));
-
-        return row;
-    }
-
-    function links() {
-        var box = document.createElement("span");
-        box.className = "st-links";
-
-        var more = document.createElement("button");
-        more.type = "button";
-        more.className = "st-link";
-        more.textContent = "Подробнее о подключении";
-
-        more.addEventListener("click", function () {
-            // Карточка сама прячется, когда всё настроено, — по этой
-            // ссылке её показываем принудительно.
-            checkSetup(true);
-        });
-
-        box.appendChild(more);
-
-        var quit = document.createElement("button");
-        quit.type = "button";
-        quit.className = "st-link quit";
-        quit.textContent = "Выход";
-
-        quit.addEventListener("click", function () { tell("quit"); });
-
-        box.appendChild(quit);
-
-        return box;
     }
 
     function refresh() {
@@ -596,51 +155,26 @@
 
             try { now = JSON.parse(raw); } catch (error) { return; }
 
-            state.innerHTML = "";
+            side.innerHTML = "";
 
-            state.appendChild(line(
+            side.appendChild(dot(
                 now.match ? "ok" : (now.dota ? "idle" : "off"),
                 now.match ? "идёт матч"
-                    : (now.dota ? "Dota 2 запущена, матча нет"
-                                : "Dota 2 не запущена")));
+                    : (now.dota ? "Dota 2 запущена" : "Dota 2 не запущена")));
 
-            state.appendChild(line(now.server ? "ok" : "bad",
-                now.server ? "приёмник данных работает"
-                           : "приёмник данных не отвечает"));
-
-            state.appendChild(line(now.overlay ? "ok" : "idle",
-                now.overlay ? "панель на экране" : "панель скрыта"));
-
-            state.appendChild(links());
+            side.appendChild(dot(now.server ? "ok" : "bad",
+                now.server ? "приёмник работает" : "приёмник молчит"));
         });
     }
 
-    connect(function () {
-        refresh();
-        setInterval(refresh, 2000);
+    setInterval(refresh, 2000);
 
-        // Мост появляется позже разметки, и первый замер высоты до него
-        // уходил в пустоту.
-        reportHeight();
-    });
+    /* Приложение может попросить открыть раздел — например, когда
+       «Справочник» выбирают в значке у часов. */
+    window.__open = open;
 
-    /* Шапка отдельной функцией: после обновления данных её надо
-       перерисовать — число матчей и дата уже другие. */
-    function loadFacts() {
-        fetch("/heroes", { cache: "no-store" })
-            .then(function (answer) { return answer.json(); })
-            .then(function (data) {
-                document.getElementById("sub").textContent =
-                    count(data.matches) + " матчей · данные от "
-                    + when(data.built_at);
-            })
-            .catch(function () {
-                document.getElementById("sub").textContent =
-                    "приложение не отвечает";
-            });
-    }
-
-    loadFacts();
+    connect();
+    open("home");
 }());
 </script>
 </body>

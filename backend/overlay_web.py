@@ -44,6 +44,10 @@ PAGE_URL = "http://localhost:3000/"
 BROWSE_URL = "http://localhost:3000/browse"
 MENU_URL = "http://localhost:3000/menu"
 
+# Размер главного окна. Подобран под содержимое: слева разделы, справа
+# справочник с четырьмя колонками сборки — им нужно около тысячи точек.
+MENU_SIZE = (1180, 720)
+
 ICON_PATH = Path(__file__).resolve().parent / "data" / "icons" / "app" / "app.ico"
 
 # Steam сам знает, где лежит игра, и сам её запустит.
@@ -181,15 +185,20 @@ class Escape(QWidget):
 class Page(QWidget):
     """Обычное окно с рамкой, внутри — страница приложения.
 
-    Справочник и главное меню отличаются только адресом и размером,
-    поэтому окно у них общее.
+    `fixed` — окно нельзя растянуть. Главное окно свёрстано под один
+    размер: растянутое, оно превращается в поле пустоты с кучкой кнопок
+    в углу, а «резиновая» вёрстка под любую ширину здесь ничего не даёт —
+    содержимого ровно на один экран.
     """
 
-    def __init__(self, title, url, size, channel=None):
+    def __init__(self, title, url, size, channel=None, fixed=False):
         super().__init__()
 
         self.setWindowTitle(title)
         self.resize(*size)
+
+        if fixed:
+            self.setFixedSize(*size)
 
         # Значок приложения задан на всё приложение сразу, но окну его
         # лучше поставить и отдельно: так он точно доживает до панели
@@ -569,12 +578,9 @@ class Overlay(QWidget):
     # --- окна приложения ---
 
     def open_browser(self):
-        if self.browser is None:
-            self.browser = Page(
-                "Dota2Helper — справочник", BROWSE_URL, (1180, 760)
-            )
+        """Справочник переехал внутрь главного окна, отдельного больше нет."""
 
-        self.browser.reopen()
+        self.open_menu("browse")
 
     def build_tray(self):
         """Значок у часов — единственный вход обратно.
@@ -659,24 +665,26 @@ class Overlay(QWidget):
 
         QApplication.quit()
 
-    def open_menu(self):
+    def open_menu(self, section=None):
         if self.menu is None:
             # Мост тот же самый: меню умеет всё то же, что и панель.
             self.menu = Page(
-                "Dota2Helper", MENU_URL, (700, 640), self.channel
+                "Dota2Helper", MENU_URL, MENU_SIZE, self.channel, fixed=True
             )
 
         self.menu.reopen()
 
+        if section:
+            self.menu.view.page().runJavaScript(
+                f"window.__open && window.__open('{section}')"
+            )
+
     def fit_menu(self, height):
-        if self.menu is None:
-            return
+        """Осталось от прежнего окна, которое подгоняло высоту под себя.
 
-        screen = self.menu.screen().availableGeometry()
-
-        self.menu.resize(
-            self.menu.width(), max(360, min(height, screen.height() - 80))
-        )
+        Теперь размер фиксирован, и подгонять нечего — но страница об
+        этом не знает и по-прежнему шлёт свою высоту.
+        """
 
     def open_settings(self):
         """Показывает настройки — и только их, если панели показывать нечего.

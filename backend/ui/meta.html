@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Dota2Helper — мета</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/windows.css">
+</head>
+<body class="page">
+
+<div class="sheet">
+    <header class="sheet-head">
+        <div>
+            <h1>Мета</h1>
+            <p id="note">кого играют сейчас и с каким успехом</p>
+        </div>
+
+        <nav class="pills" id="pills"></nav>
+    </header>
+
+    <div class="rank" id="rank"></div>
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    var ROLES = [
+        ["POSITION_1", "1 · керри"],
+        ["POSITION_2", "2 · мид"],
+        ["POSITION_3", "3 · оффлейн"],
+        ["POSITION_4", "4 · роумер"],
+        ["POSITION_5", "5 · саппорт"]
+    ];
+
+    var rows = [];
+    var position = "POSITION_1";
+
+    var rank = document.getElementById("rank");
+    var pills = document.getElementById("pills");
+
+    function count(value) {
+        return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    }
+
+    function draw() {
+        var list = rows.filter(function (row) {
+            return row.position === position;
+        });
+
+        rank.innerHTML = "";
+
+        if (!list.length) {
+            rank.appendChild(document.createTextNode("данных нет"));
+
+            return;
+        }
+
+        /* Полоса длиной в долю позиции: глазами видно расстановку, не
+           перечитывая проценты построчно. */
+        var top = list[0].share || 1;
+
+        list.slice(0, 40).forEach(function (row, index) {
+            var line = document.createElement("div");
+            line.className = "rank-row";
+
+            line.innerHTML =
+                '<span class="rank-no">' + (index + 1) + "</span>"
+                + '<img class="rank-art" src="/icons/heroes/' + row.hero
+                + '.png" alt="">'
+                + '<span class="rank-name">' + row.display + "</span>"
+                + '<span class="rank-bar"><i style="width:'
+                + Math.max(2, Math.round(row.share / top * 100)) + '%"></i></span>'
+                + '<span class="rank-share">' + row.share + "%</span>"
+                + '<span class="rank-wr' + (row.winrate >= 50 ? " up" : "")
+                + '">' + row.winrate + "%</span>"
+                + '<span class="rank-games">' + count(row.matches) + "</span>";
+
+            rank.appendChild(line);
+        });
+    }
+
+    ROLES.forEach(function (pair) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "pill" + (pair[0] === position ? " on" : "");
+        button.textContent = pair[1];
+
+        button.addEventListener("click", function () {
+            position = pair[0];
+
+            Array.prototype.forEach.call(pills.children, function (node, i) {
+                node.classList.toggle("on", ROLES[i][0] === position);
+            });
+
+            draw();
+        });
+
+        pills.appendChild(button);
+    });
+
+    fetch("/api/meta", { cache: "no-store" })
+        .then(function (answer) { return answer.json(); })
+        .then(function (data) {
+            rows = data.rows || [];
+
+            document.getElementById("note").textContent =
+                "кого играют сейчас · патч " + (data.patch || "—")
+                + " · " + count(data.matches || 0) + " матчей";
+
+            draw();
+        })
+        .catch(function (error) { console.error(error); });
+}());
+</script>
+</body>
+</html>

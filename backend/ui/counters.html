@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Dota2Helper — контрпики</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/windows.css">
+</head>
+<body class="page">
+
+<div class="split">
+    <!-- Слева тот же список героев, что и в справочнике: выбор героя —
+         это первое, что здесь делают. -->
+    <nav class="roster">
+        <input class="search" id="search" type="search" autocomplete="off"
+               placeholder="найти героя">
+        <div id="roster"></div>
+    </nav>
+
+    <section class="guide">
+        <div class="empty" id="empty">выбери героя слева</div>
+        <div id="view" hidden></div>
+    </section>
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    var heroes = [];
+    var chosen = null;
+
+    var roster = document.getElementById("roster");
+    var search = document.getElementById("search");
+    var view = document.getElementById("view");
+    var empty = document.getElementById("empty");
+
+    function count(value) {
+        return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    }
+
+    function drawRoster() {
+        var needle = search.value.trim().toLowerCase();
+
+        roster.innerHTML = "";
+
+        heroes.filter(function (hero) {
+            return !needle
+                || hero.display.toLowerCase().indexOf(needle) >= 0;
+        }).forEach(function (hero) {
+            var cell = document.createElement("button");
+            cell.type = "button";
+            cell.className = "pick" + (hero.hero === chosen ? " on" : "");
+
+            cell.innerHTML =
+                '<img class="pick-art" src="/icons/heroes/' + hero.hero
+                + '.png" alt="">'
+                + '<span class="pick-name">' + hero.display + "</span>";
+
+            cell.addEventListener("click", function () {
+                chosen = hero.hero;
+                drawRoster();
+                load();
+            });
+
+            roster.appendChild(cell);
+        });
+    }
+
+    /* Одна колонка: пятёрка, против кого тяжелее всего, и пятёрка, против
+       кого легче. Вторая нужна не меньше первой — по ней выбирают, кого
+       брать, а не только чего бояться. */
+    function side(title, note, rows, kind) {
+        var card = document.createElement("section");
+        card.className = "col";
+
+        card.innerHTML =
+            '<div class="col-head"><span class="col-title">' + title
+            + '</span><span class="col-note">' + note + "</span></div>";
+
+        var list = document.createElement("div");
+        list.className = "col-list";
+
+        rows.forEach(function (row) {
+            var line = document.createElement("div");
+            line.className = "line";
+
+            var answers = (row.answers || []).map(function (item) {
+                return item.display;
+            }).join(", ");
+
+            line.innerHTML =
+                '<img class="line-art" src="/icons/heroes/' + row.hero
+                + '.png" alt="">'
+                + '<div class="line-body"><div class="line-name">'
+                + row.display + "</div>"
+                + (answers
+                    ? '<div class="line-role">чаще берут: ' + answers + "</div>"
+                    : "")
+                + "</div>"
+                + '<div class="line-tail"><span class="line-share '
+                + (kind === "bad" ? "down" : "up") + '">' + row.winrate
+                + '%</span><span class="line-time">'
+                + count(row.matches) + " встреч</span></div>";
+
+            list.appendChild(line);
+        });
+
+        card.appendChild(list);
+
+        return card;
+    }
+
+    function load() {
+        fetch("/api/counters?hero=" + encodeURIComponent(chosen),
+              { cache: "no-store" })
+            .then(function (answer) { return answer.json(); })
+            .then(function (data) {
+                empty.hidden = true;
+                view.hidden = false;
+                view.innerHTML = "";
+
+                var head = document.createElement("div");
+                head.className = "hero-head";
+                head.innerHTML =
+                    '<img class="hero-face" src="/icons/heroes/' + data.hero
+                    + '.png" alt="">'
+                    + '<div class="hero-titles"><div class="hero-name">'
+                    + data.display + "</div>"
+                    + '<div class="hero-facts">кто его обыгрывает и что'
+                    + " против них берут</div></div>";
+
+                view.appendChild(head);
+
+                if (data.note || !(data.worst || []).length) {
+                    var say = document.createElement("div");
+                    say.className = "empty";
+                    say.textContent = data.note || "пар с этим героем мало";
+                    view.appendChild(say);
+
+                    return;
+                }
+
+                var cols = document.createElement("div");
+                cols.className = "cols two";
+
+                cols.appendChild(side("Тяжело против", "по проценту побед",
+                    data.worst, "bad"));
+                cols.appendChild(side("Легко против", "по проценту побед",
+                    data.best, "good"));
+
+                view.appendChild(cols);
+            })
+            .catch(function (error) { console.error(error); });
+    }
+
+    search.addEventListener("input", drawRoster);
+
+    fetch("/heroes", { cache: "no-store" })
+        .then(function (answer) { return answer.json(); })
+        .then(function (data) {
+            heroes = data.heroes || [];
+            drawRoster();
+        })
+        .catch(function (error) { console.error(error); });
+}());
+</script>
+</body>
+</html>

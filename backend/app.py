@@ -12,6 +12,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from urllib.parse import parse_qs, urlparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -372,6 +373,15 @@ class Helper:
 
         return {"ok": True, "path": str(path)}
 
+    def meta(self):
+        return self.engine.meta()
+
+    def counters(self, hero):
+        if not hero:
+            return {"error": "герой не указан"}
+
+        return self.engine.counters(hero)
+
     def setup(self):
         """Готова ли Дота отдавать данные — и если нет, то чего не хватает."""
 
@@ -525,6 +535,41 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split("?", 1)[0]
 
+        if path in ("/meta", "/meta.html"):
+            self.send_file(UI_DIR / "meta.html", "text/html; charset=utf-8")
+
+            return
+
+        if path in ("/counters", "/counters.html"):
+            self.send_file(
+                UI_DIR / "counters.html", "text/html; charset=utf-8"
+            )
+
+            return
+
+        if path.startswith("/api/meta"):
+            self.send_body(
+                json.dumps(HELPER.meta(), ensure_ascii=False).encode("utf-8"),
+                "application/json; charset=utf-8",
+                cache=False,
+            )
+
+            return
+
+        if path.startswith("/api/counters"):
+            query = parse_qs(urlparse(self.path).query)
+
+            self.send_body(
+                json.dumps(
+                    HELPER.counters((query.get("hero") or [""])[0]),
+                    ensure_ascii=False,
+                ).encode("utf-8"),
+                "application/json; charset=utf-8",
+                cache=False,
+            )
+
+            return
+
         if path.startswith("/updates"):
             self.send_body(
                 json.dumps(
@@ -567,6 +612,31 @@ class Handler(BaseHTTPRequestHandler):
 
         if path in ("/browse", "/browse.html"):
             self.send_file(UI_DIR / "browse.html", "text/html; charset=utf-8")
+
+            return
+
+        # Фон шапки главного окна. Лежит рядом с разметкой; если его
+        # нет, страница сама возьмёт портрет героя.
+        if path == "/steam.png":
+            self.send_file(UI_DIR / "steamlogo.png", "image/png")
+
+            return
+
+        if path == "/banner.png":
+            self.send_file(UI_DIR / "background.png", "image/png")
+
+            return
+
+        if path in ("/home", "/home.html"):
+            self.send_file(UI_DIR / "home.html", "text/html; charset=utf-8")
+
+            return
+
+        if path == "/home.js":
+            self.send_file(
+                UI_DIR / "home.js", "application/javascript; charset=utf-8",
+                cache=False,
+            )
 
             return
 

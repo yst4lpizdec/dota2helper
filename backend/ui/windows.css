@@ -388,18 +388,14 @@ body.menu { background: #0b0e13; }
     transition: background-color 0.13s ease, transform 0.13s ease;
 }
 
-/* Значок в кружке: так кнопка читается как «действие», а не как ссылка. */
+/* Значок Steam: запуск идёт через него, и это стоит показать — кнопка
+   сразу читается как «откроется Steam», а не «запустится игра сама». */
 .big-btn-mark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: rgba(8, 17, 30, 0.22);
+    width: 22px;
+    height: 22px;
+    flex: none;
+    object-fit: contain;
 }
-
-.big-btn-mark svg { width: 13px; height: 13px; }
 
 .big-btn:hover { background: var(--accent-lit); }
 .big-btn:active { transform: translateY(1px); }
@@ -836,5 +832,317 @@ body.solo .stage { gap: 0; }
     margin-left: auto;
     font-size: 10.5px;
     color: var(--faint);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ */
+/* оболочка: слева разделы, справа страница                             */
+/* ------------------------------------------------------------------ */
+
+body.shell { background: #090b10; overflow: hidden; }
+
+.app {
+    display: grid;
+    grid-template-columns: 196px 1fr;
+    height: 100vh;
+}
+
+.side {
+    display: flex;
+    flex-direction: column;
+    padding: 16px 12px 14px;
+    background: #0b0e14;
+    border-right: 1px solid var(--line-soft);
+}
+
+.side-brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 2px 8px 18px;
+    font-size: 13.5px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+}
+
+.side-logo { width: 20px; height: 20px; border-radius: 5px; }
+
+.side-nav { display: flex; flex-direction: column; gap: 2px; }
+
+.side-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 550;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.side-item svg { width: 17px; height: 17px; flex: none; }
+
+.side-item:hover { background: var(--card); color: var(--text); }
+
+/* Выбранный раздел — заливкой, а не только цветом текста: взгляд должен
+   находить его, не перечитывая список. */
+.side-item.on {
+    background: var(--accent-dim);
+    color: var(--accent-lit);
+}
+
+.side-foot { margin-top: auto; padding-top: 14px; }
+
+.side-state { display: flex; flex-direction: column; gap: 6px; }
+
+.side-dot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    font-size: 11px;
+    color: var(--faint);
+}
+
+.side-dot i {
+    width: 6px;
+    height: 6px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--faint);
+}
+
+.side-dot.ok { color: var(--muted); }
+.side-dot.ok i { background: var(--good); }
+.side-dot.bad { color: #ff9b8f; }
+.side-dot.bad i { background: #ff6b5b; }
+
+.side-links {
+    display: flex;
+    gap: 14px;
+    margin-top: 14px;
+    padding: 12px 10px 0;
+    border-top: 1px solid var(--line-soft);
+}
+
+.side-link {
+    border: 0;
+    padding: 0;
+    background: none;
+    font-family: inherit;
+    font-size: 11.5px;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.side-link:hover { color: var(--text); }
+.side-link.quit:hover { color: #ff9b8f; }
+
+.stage { min-width: 0; overflow: hidden; }
+
+.frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+}
+
+/* ------------------------------------------------------------------ */
+/* страница раздела внутри рамки                                        */
+/* ------------------------------------------------------------------ */
+
+body.page { background: #0b0e13; }
+
+body.home-page .home {
+    max-width: none;
+    margin: 0;
+    padding: 0 22px 20px;
+    gap: 14px;
+}
+
+body.home-page .hero-banner { margin: 0 -22px; }
+
+/* Свой рисунок на фоне — широкая сцена, а не портрет: его лучше
+   показывать целиком и во всю ширину шапки. */
+body.own-art .hero-art { width: 100%; }
+
+body.own-art .hero-art::after {
+    background: linear-gradient(
+        90deg,
+        rgba(11, 14, 19, 0.96) 0%,
+        rgba(11, 14, 19, 0.82) 34%,
+        rgba(11, 14, 19, 0.34) 72%,
+        rgba(11, 14, 19, 0.18) 100%
+    );
+}
+
+/* ------------------------------------------------------------------ */
+/* мета: кого играют сейчас                                             */
+/* ------------------------------------------------------------------ */
+
+.sheet { padding: 22px 24px 26px; }
+
+.sheet-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.sheet-head h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+}
+
+.sheet-head p {
+    margin: 4px 0 0;
+    font-size: 11.5px;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+}
+
+.pills { display: flex; gap: 5px; }
+
+.pill {
+    padding: 6px 11px;
+    border: 1px solid var(--line-soft);
+    border-radius: 7px;
+    background: var(--card);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 11.5px;
+    cursor: pointer;
+}
+
+.pill:hover { background: var(--card-lift); color: var(--text); }
+
+.pill.on {
+    background: var(--accent);
+    border-color: transparent;
+    color: #08111e;
+    font-weight: 600;
+}
+
+.rank { display: flex; flex-direction: column; gap: 2px; }
+
+/* Строка-таблица: номер, герой, полоса доли, три числа. Колонки жёсткие,
+   иначе цифры пляшут от строки к строке и их нельзя сравнить взглядом. */
+.rank-row {
+    display: grid;
+    grid-template-columns: 26px 34px 1fr 150px 54px 54px 66px;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 8px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.rank-row:hover { background: var(--card); }
+
+.rank-no { color: var(--faint); font-size: 11px; text-align: right; }
+
+.rank-art { width: 34px; border-radius: 4px; background: var(--slot-bg); }
+
+.rank-name { font-weight: 600; }
+
+.rank-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--card-lift);
+    overflow: hidden;
+}
+
+.rank-bar i { display: block; height: 100%; background: var(--accent); }
+
+.rank-share { color: var(--muted); text-align: right; }
+
+.rank-wr { color: var(--muted); text-align: right; }
+.rank-wr.up { color: var(--good); }
+
+.rank-games { color: var(--faint); text-align: right; font-size: 11px; }
+
+/* ------------------------------------------------------------------ */
+/* контрпики                                                            */
+/* ------------------------------------------------------------------ */
+
+.line-share.up { color: var(--good); }
+.line-share.down { color: #ff8f82; }
+
+/* Поиск в списке героев этого раздела: у справочника он живёт в шапке,
+   а здесь шапки нет. */
+.roster .search {
+    width: calc(100% - 16px);
+    margin: 10px 8px;
+}
+
+/* ------------------------------------------------------------------ */
+/* матч прямо сейчас                                                    */
+/* ------------------------------------------------------------------ */
+
+.live {
+    padding: 14px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--accent-dim);
+    background: rgba(76, 157, 255, 0.06);
+}
+
+.live-head { display: flex; align-items: center; gap: 12px; }
+
+.live-face { width: 54px; border-radius: 7px; background: var(--slot-bg); }
+
+.live-who { flex: 1; min-width: 0; }
+
+.live-name { font-size: 15px; font-weight: 650; }
+
+.live-note {
+    margin-top: 2px;
+    font-size: 11.5px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.live-enemies { display: flex; gap: 4px; }
+
+.live-enemies img {
+    width: 38px;
+    border-radius: 4px;
+    background: var(--slot-bg);
+    opacity: 0.85;
+}
+
+.live-next {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-soft);
+}
+
+.live-next > span { font-size: 11px; color: var(--faint); }
+
+.next-row { display: flex; gap: 8px; }
+
+.next-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+
+.next-item img {
+    width: 42px;
+    border-radius: 5px;
+    background: var(--slot-bg);
+}
+
+.next-item span {
+    font-size: 10px;
+    color: var(--time);
     font-variant-numeric: tabular-nums;
 }

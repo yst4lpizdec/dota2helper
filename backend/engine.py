@@ -433,6 +433,133 @@ class Engine:
 
         return self._guide_items
 
+    def meta(self):
+        """Кого и на какой позиции играют сейчас, с винрейтом.
+
+        Всё берётся из готовых гайдов: число матчей связки герой+позиция
+        и есть её популярность, считать отдельно нечего.
+        """
+
+        rows = []
+
+        for key, guide in self.snapshot["guides"].items():
+            hero_id, position = key.split(":", 1)
+
+            hero = self.snapshot["heroes"].get(hero_id)
+
+            if not hero:
+                continue
+
+            rows.append(
+                {
+                    "hero": hero["name"].replace("npc_dota_hero_", ""),
+                    "display": hero["localized_name"],
+                    "position": position,
+                    "matches": guide["matches"],
+                    "winrate": guide["winrate"],
+                }
+            )
+
+        # Доля позиции считается внутри неё самой: сравнивать кэрри с
+        # хардсаппортом по числу матчей бессмысленно, их играют разное
+        # число раз просто потому, что позиций пять.
+        totals = {}
+
+        for row in rows:
+            totals[row["position"]] = (
+                totals.get(row["position"], 0) + row["matches"]
+            )
+
+        for row in rows:
+            total = totals.get(row["position"]) or 1
+
+            row["share"] = round(row["matches"] / total * 100, 1)
+
+        rows.sort(key=lambda row: -row["matches"])
+
+        return {
+            "patch": self.snapshot.get("patch"),
+            "matches": self.snapshot.get("matches"),
+            "rows": rows,
+        }
+
+    def counters(self, hero_short, top=8):
+        """Против кого герою тяжелее всего — и что против них берут.
+
+        Винрейт пары честнее, чем «контрпик» на глаз: это то, чем
+        заканчивались настоящие матчи, где эти двое встретились.
+        """
+
+        hero = self.hero_id(hero_short)
+
+        if hero is None:
+            return {"error": f"неизвестный герой: {hero_short}"}
+
+        pairs = self.snapshot.get("pairs", {}).get(str(hero), {})
+
+        if not pairs:
+            return {
+                "hero": hero_short,
+                "display": self.hero_display.get(hero_short, hero_short),
+                "rows": [],
+                "note": "данных по парам нет — нужен пересчёт",
+            }
+
+        matchups = self.snapshot["matchups"].get(str(hero), {})
+
+        rows = []
+
+        for enemy_id, counters in pairs.items():
+            enemy = self.snapshot["heroes"].get(enemy_id)
+
+            if not enemy:
+                continue
+
+            matches, wins = counters
+
+            if not matches:
+                continue
+
+            winrate = wins / matches * 100
+
+            # Что против этого врага берут чаще обычного — первые три.
+            shifts = matchups.get(enemy_id, {})
+
+            answers = []
+
+            for item_id, shift in sorted(
+                shifts.items(), key=lambda pair: -pair[1]
+            )[:3]:
+                item = self.snapshot["items"].get(item_id)
+
+                if item and shift > 0:
+                    answers.append(
+                        {
+                            "item": item["name"],
+                            "display": item["display"],
+                            "shift": round(shift, 1),
+                        }
+                    )
+
+            rows.append(
+                {
+                    "hero": enemy["name"].replace("npc_dota_hero_", ""),
+                    "display": enemy["localized_name"],
+                    "matches": matches,
+                    "winrate": round(winrate, 1),
+                    "answers": answers,
+                }
+            )
+
+        rows.sort(key=lambda row: row["winrate"])
+
+        return {
+            "hero": hero_short,
+            "display": self.hero_display.get(hero_short, hero_short),
+            "worst": rows[:top],
+            "best": list(reversed(rows[-top:])),
+        }
+
     def item_report(self, name):
         """Кто берёт этот предмет: герой, позиция, доля, тайминг, винрейт.
 

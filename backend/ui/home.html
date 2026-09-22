@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Dota2Helper — главная</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/windows.css">
+</head>
+<body class="page home-page">
+
+<div class="home">
+    <!-- Шапка: слева слова, справа портрет героя. -->
+    <header class="hero-banner">
+        <div class="hero-art" id="hero-art"></div>
+
+        <div class="hero-text">
+            <h1>Добро пожаловать в Dota2Helper</h1>
+            <p>Подсказка по сборке прямо в игре: что брать следующим,
+               к какой минуте и что меняет вражеский пик.</p>
+
+            <button class="big-btn" id="play" type="button">
+                <img class="big-btn-mark" src="/steam.png" alt="">
+                Запустить Dota 2
+            </button>
+
+            <div class="big-btn-note">Запуск через Steam</div>
+
+            <div class="hero-facts" id="sub">загружаю…</div>
+        </div>
+    </header>
+
+    <!-- Пока Дота не настроена отдавать данные, приложение молчит и
+         выглядит сломанным. Поэтому первое, что видит человек, — чего
+         не хватает и что с этим сделать. -->
+    <section class="setup" id="setup" hidden></section>
+
+    <!-- Обновления: данные и программа отдельно. -->
+    <section class="upd" id="upd" hidden></section>
+
+    <!-- Что происходит в матче прямо сейчас. Ради этого приложение и
+         открывают во время игры: без панели на экране увидеть совет
+         было бы негде. -->
+    <section class="live" id="live" hidden></section>
+
+    <section class="about" id="about-card"></section>
+
+    <footer class="status" id="state"></footer>
+</div>
+
+<script src="/home.js"></script>
+</body>
+</html>

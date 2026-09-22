@@ -99,6 +99,17 @@ def build_snapshot():
 
         enemy[str(row["item_id"])] = row["shift"]
 
+    # Кто у кого выигрывает: герой -> враг -> [встреч, побед]. Нужно
+    # разделу контрпиков; в матчапах выше лежат только сдвиги закупки.
+    pairs = {}
+
+    for row in connection.execute(
+        "SELECT hero_id, enemy_hero_id, matches, wins FROM matchup_pairs"
+    ):
+        hero = pairs.setdefault(str(row["hero_id"]), {})
+
+        hero[str(row["enemy_hero_id"])] = [row["matches"], row["wins"]]
+
     # Раскладка героя: номер способности и место таланта в дереве.
     layout = {}
 
@@ -145,6 +156,7 @@ def build_snapshot():
         "layout": layout,
         "guides": guides,
         "matchups": matchups,
+        "pairs": pairs,
     }
 
 
