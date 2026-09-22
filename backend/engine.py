@@ -903,6 +903,10 @@ class Engine:
             # угаданную, чтобы её было понятно поправить.
             "position_manual": bool(chosen),
             "matches": guide["matches"],
+            # Сумма весов матчей: по ней посчитаны все проценты ниже.
+            # Настоящее число игр и вес расходятся тем сильнее, чем
+            # старше матчи — по этой паре видно, на чём стоит совет.
+            "weight": guide.get("weight"),
             "winrate": guide["winrate"],
             "enemies_known": len(enemies),
             "starting": guide["starting"][:8],

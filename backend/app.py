@@ -670,6 +670,23 @@ def take_over(port, timeout=6.0):
             time.sleep(0.3)
 
 
+def serve_in_background(port=PORT):
+    """Поднимает приёмник в отдельном потоке и сразу возвращает управление.
+
+    Так приложение живёт одним процессом: в главном потоке рисуется
+    панель, в фоновом принимаются пакеты от игры. Раньше это были две
+    программы, и у одной из них оставалось чёрное окно консоли, которое
+    игрок видел и закрывал вместе со всем остальным.
+    """
+
+    server = take_over(port)
+
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    return server
+
+
 def run(port=PORT):
     if not SNAPSHOT_PATH.exists():
         raise SystemExit(

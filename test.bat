@@ -2,21 +2,17 @@
 setlocal
 cd /d "%~dp0backend"
 
-echo Starting Dota2Helper...
-start "Dota2Helper" "%~dp0.venv\Scripts\python.exe" app.py
+rem Показ на сохранённой катке: приложение думает, что идёт матч.
+rem   test.bat            - старт матча с полным пиком
+rem   test.bat in_progress - середина катки
+rem   test.bat --list      - какие снимки есть
+start "" "%~dp0.venv\Scripts\pythonw.exe" overlay_web.py
 
-rem ping instead of timeout: timeout fails when stdin is redirected
-ping -n 8 127.0.0.1 >nul
+rem ping вместо timeout: timeout падает, когда ввод перенаправлен
+ping -n 6 127.0.0.1 >nul
 
-echo Feeding a saved match (%1)...
 start "Dota2Helper replay" "%~dp0.venv\Scripts\python.exe" replay.py %1
 
-ping -n 3 127.0.0.1 >nul
-
-echo Starting overlay...
-start "Dota2Helper overlay" "%~dp0.venv\Scripts\pythonw.exe" overlay_web.py
-
 echo.
-echo Test mode. Close the "Dota2Helper replay" window - and the panel goes
-echo back to waiting for a real game.
+echo Закрой окно replay - и панель снова будет ждать настоящую игру.
 ping -n 4 127.0.0.1 >nul

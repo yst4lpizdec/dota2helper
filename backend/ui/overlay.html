@@ -99,7 +99,7 @@
 
         <div class="sheet-foot">
             <button class="btn" id="recenter" type="button">вернуть на экран</button>
-            <button class="btn" id="quit2" type="button">закрыть оверлей</button>
+            <button class="btn" id="quit2" type="button">убрать панель</button>
         </div>
     </aside>
 
@@ -868,10 +868,13 @@
     });
     bindTip(document.getElementById("fold"),
         "краткий вид &middot; Ctrl+Alt+D");
-    bindTip(document.getElementById("quit"), "закрыть оверлей");
+    bindTip(document.getElementById("quit"),
+        "убрать панель &middot; приложение останется в трее");
 
+    /* Именно спрятать панель, а не выйти: панель — одно из окон
+       программы, а не сама программа. Выход живёт в главном окне. */
     document.getElementById("quit").addEventListener("click", function () {
-        tell("quit");
+        tell("hidePanel");
     });
 
     document.getElementById("fold").addEventListener("click", function () {
@@ -1037,7 +1040,7 @@
     });
 
     document.getElementById("quit2").addEventListener("click", function () {
-        tell("quit");
+        tell("hidePanel");
     });
 
     var hideBox = document.getElementById("hide-without-dota");

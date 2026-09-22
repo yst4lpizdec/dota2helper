@@ -11,6 +11,7 @@
 """
 
 import json
+import os
 import sys
 import threading
 import time
@@ -27,6 +28,8 @@ from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QLabel,
+    QMenu,
+    QSystemTrayIcon,
     QVBoxLayout,
     QWidget,
 )
@@ -398,8 +401,14 @@ class Bridge(QObject):
         self.window.tell_app("/position", {"position": position or None})
 
     @Slot()
-    def quit(self):
+    def hidePanel(self):
+        """Убрать панель с экрана. Программа при этом остаётся."""
+
         self.window.close()
+
+    @Slot()
+    def quit(self):
+        self.window.quit_all()
 
 
 class Overlay(QWidget):
@@ -413,6 +422,9 @@ class Overlay(QWidget):
 
         self.click_through = False
         self.compact = False
+        # Панель закрыли вручную: до конца матча не показываем её снова,
+        # иначе она вернётся сама через пару секунд, по таймеру.
+        self.dismissed = False
         self.escape = Escape(lambda: self.set_click_through(False))
         self.browser = None
         self.menu = None
@@ -456,6 +468,8 @@ class Overlay(QWidget):
 
         self.set_opacity(settings.get("opacity") or 100)
         self.set_scale(round((settings.get("scale") or 1) * 100))
+
+        self.tray = self.build_tray()
 
         self.hotkeys = Hotkeys(
             {
@@ -558,6 +572,61 @@ class Overlay(QWidget):
 
         self.browser.reopen()
 
+    def build_tray(self):
+        """Значок у часов — единственный вход обратно.
+
+        Панель прячется вместе с матчем, меню можно закрыть, и без значка
+        программа осталась бы работать совсем без видимых окон: она есть,
+        а показать её нечем.
+        """
+
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            print("трей недоступен — значка не будет")
+
+            return None
+
+        tray = QSystemTrayIcon(QIcon(str(ICON_PATH)) if ICON_PATH.exists() else QIcon(), self)
+        tray.setToolTip("Dota2Helper")
+
+        menu = QMenu()
+
+        menu.addAction("Главное окно", self.open_menu)
+        menu.addAction("Показать панель", self.show_overlay)
+        menu.addAction("Справочник", self.open_browser)
+        menu.addSeparator()
+        menu.addAction("Выход", self.quit_all)
+
+        tray.setContextMenu(menu)
+
+        tray.activated.connect(self.on_tray)
+        tray.show()
+
+        # Меню живёт ровно столько, сколько значок: без ссылки его
+        # соберёт сборщик мусора, и по правой кнопке ничего не выпадет.
+        self.tray_menu = menu
+
+        print("значок в трее поставлен")
+
+        return tray
+
+    def on_tray(self, reason):
+        if reason == QSystemTrayIcon.Trigger:
+            self.open_menu()
+
+    def quit_all(self):
+        """Настоящий выход: по просьбе из меню или из значка."""
+
+        for window in (self.browser, self.menu):
+            if window is not None:
+                window.close()
+
+        self.escape.hide()
+
+        if self.tray is not None:
+            self.tray.hide()
+
+        QApplication.quit()
+
     def open_menu(self):
         if self.menu is None:
             # Мост тот же самый: меню умеет всё то же, что и панель.
@@ -617,6 +686,8 @@ class Overlay(QWidget):
         if self.hide_without_dota and not self.match_in_progress():
             self.set_hide_without_dota(False)
             self.run("window.__setHideWithoutDota && window.__setHideWithoutDota(false)")
+
+        self.dismissed = False
 
         self.set_panel_visible(True)
         self.raise_()
@@ -683,6 +754,16 @@ class Overlay(QWidget):
         if self.settings_solo:
             return
 
+        live = self.match_in_progress()
+
+        # Матч кончился — прошлый отказ от панели забываем: в следующем
+        # она должна появиться сама.
+        if not live:
+            self.dismissed = False
+
+        if self.dismissed:
+            return
+
         if not self.hide_without_dota:
             self.set_panel_visible(True)
 
@@ -690,10 +771,17 @@ class Overlay(QWidget):
 
         # Панель живёт по матчу, а не по процессу Доты: в меню игры она
         # не нужна, а на драфте нужна.
-        self.set_panel_visible(self.match_in_progress())
+        self.set_panel_visible(live)
 
     def set_panel_visible(self, visible):
-        if visible == self.wanted_visible:
+        """Показывает или прячет панель.
+
+        Сверяемся с тем, что на экране, а не только с собственной
+        отметкой: при запуске отметка говорила «показана», а окно ни разу
+        не показывали — и панель не появлялась вовсе.
+        """
+
+        if visible == self.wanted_visible and visible == self.isVisible():
             return
 
         self.wanted_visible = visible
@@ -776,17 +864,60 @@ class Overlay(QWidget):
             self.close()
 
     def closeEvent(self, event):
+        """Закрыли панель — приложение остаётся.
+
+        Раньше крестик на панели закрывал всё, вместе с меню и
+        справочником. Но панель — это одно из окон приложения, а не само
+        приложение: закрыть её и остаться в меню должно быть можно.
+        Выход целиком — только кнопкой «Выход» в меню.
+        """
+
+        event.ignore()
+
+        print("панель убрана, приложение продолжает работать")
+
         self.escape.hide()
+        self.dismissed = True
 
-        # Остальные окна — не самостоятельные приложения: закрыли панель
-        # крестиком, значит выходим целиком.
-        for window in (self.browser, self.menu):
-            if window is not None:
-                window.close()
+        self.set_panel_visible(False)
 
-        QApplication.quit()
+        # Иначе видимых окон не остаётся вовсе: программа работает, а
+        # увидеть её можно только через значок в трее, который Windows
+        # по умолчанию прячет под стрелку.
+        #
+        # Через таймер, а не сразу: создавать окно прямо в обработчике
+        # закрытия другого окна Qt не даёт — меню молча не появлялось.
+        QTimer.singleShot(0, self.open_menu)
 
-        super().closeEvent(event)
+
+def open_log():
+    """Куда писать, когда консоли нет.
+
+    Под pythonw (и в собранном приложении) `sys.stdout` равен None, и
+    любой print роняет программу на ровном месте. Поэтому вывод уходит
+    в файл рядом с данными: он же пригодится, когда что-то сломается у
+    игрока, а консоли, чтобы посмотреть, у него нет.
+    """
+
+    if sys.stdout is not None:
+        return
+
+    path = Path(__file__).resolve().parent / "data" / "helper.log"
+
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        handle = open(path, "a", encoding="utf-8", buffering=1)
+
+    except OSError:
+        # Даже если писать некуда, работать программа должна.
+        handle = open(os.devnull, "w", encoding="utf-8")
+
+    sys.stdout = handle
+    sys.stderr = handle
+
+    print("")
+    print("--- запуск " + time.strftime("%d.%m.%Y %H:%M:%S") + " ---")
 
 
 def main():
@@ -803,6 +934,8 @@ def main():
         except (OSError, AttributeError):
             pass
 
+    open_log()
+
     app = QApplication(sys.argv)
 
     if ICON_PATH.exists():
@@ -817,6 +950,20 @@ def main():
 
     if not guard.take_over():
         print("прежний оверлей не отвечает — запускаюсь рядом с ним")
+
+    # Приёмник поднимаем сами, в фоновом потоке: отдельной программы с
+    # чёрным окном консоли больше нет. Порядок важен — сначала уходит
+    # прежний экземпляр, потом мы занимаем его порт.
+    try:
+        import app as helper
+
+        helper.serve_in_background()
+
+    except SystemExit as error:
+        # Нет snapshot'а или порт не освободился: показать это игроку
+        # некому, поэтому пишем в журнал и продолжаем — страница сама
+        # скажет, что приёмник не отвечает.
+        print(f"приёмник не поднялся: {error}")
 
     window = Overlay()
 

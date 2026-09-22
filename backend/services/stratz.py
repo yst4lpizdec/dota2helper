@@ -6,8 +6,12 @@ from config import STRATZ_API, STRATZ_API_KEY
 
 
 # Реальные лимиты из заголовков x-ratelimit-*: 8/сек, 150/мин, 1500/час.
-# Держим паузу с запасом, чтобы не ловить 429.
-MIN_INTERVAL = 0.4
+#
+# Связывает именно часовой: 1500 вызовов в час — это один в 2.4 секунды,
+# и пауза в 0.4 секунды его проедала за семь минут. Пока за вызов
+# приезжала сотня матчей, это было незаметно; при досборе свежего патча
+# матчей на вызов всего несколько, и сбор упирается в число вызовов.
+MIN_INTERVAL = 2.5
 
 # Сколько матчей забираем за один вызов. STRATZ отдаёт 100 матчей
 # с полными деталями примерно за полторы секунды, списывая один вызов.
@@ -83,7 +87,11 @@ def query(graphql, retries=5):
             continue
 
         if response.status_code == 429:
-            pause = 5 * (attempt + 1)
+            # Часовой лимит коротким ожиданием не пересидеть, а STRATZ
+            # обычно сам говорит, сколько ждать.
+            pause = int(response.headers.get("Retry-After") or 0) or 60 * (
+                attempt + 1
+            )
 
             print(f"  Лимит запросов, ждём {pause} сек...")
             time.sleep(pause)
@@ -166,13 +174,23 @@ def get_leaderboard_accounts():
     return accounts
 
 
-def get_player_matches(steam_account_id, game_versions=None, take=MATCHES_PER_CALL):
+def get_player_matches(
+    steam_account_id, game_versions=None, take=MATCHES_PER_CALL, after=None
+):
     """Матчи одного игрока сразу с предметами, способностями и позициями.
 
     Берём только распарсенные матчи — у них есть purchase/ability данные.
+
+    `after` — не брать матчи раньше этого времени (секунды эпохи). Это
+    единственный надёжный способ отобрать матчи нужного патча: номера
+    версий у STRATZ застряли на 7.40b, и `gameVersionIds` ничего не
+    отсекает. Патч определяется датой выхода, дата матча — этим полем.
     """
 
     filters = [f"take:{take}", "isParsed:true"]
+
+    if after:
+        filters.append(f"startDateTime:{int(after)}")
 
     if game_versions:
         filters.append(

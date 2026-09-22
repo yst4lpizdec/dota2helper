@@ -472,13 +472,16 @@ def save_matches(matches, talent_ids):
     return new_accounts
 
 
-def collect(target=1000, game_versions=None):
+def collect(target=1000, game_versions=None, after=None):
     """Собирает матчи снежным комом.
 
     Берёт аккаунт из очереди, качает его последние матчи со всеми деталями,
     а всех встреченных соигроков и противников кладёт в очередь на потом.
     Так выборка остаётся примерно в том же диапазоне рейтинга,
     что и стартовые игроки из лидербордов.
+
+    `after` — брать только матчи не раньше этого времени. Так досбирают
+    свежий патч: старые матчи в базе уже есть, и тянуть их заново незачем.
     """
 
     talent_ids = load_talent_ids()
@@ -508,6 +511,7 @@ def collect(target=1000, game_versions=None):
                 matches = stratz.get_player_matches(
                     account_id,
                     game_versions=game_versions,
+                    after=after,
                 )
 
             except Exception as error:
