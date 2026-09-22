@@ -9,12 +9,34 @@ import gzip
 import json
 import time
 
-from config import DATA_DIR
+from config import DATA_DIR, USER_DIR
 from database.database import get_connection
 from services.patches import Weights
 
 
 SNAPSHOT_PATH = DATA_DIR / "snapshot.json.gz"
+
+# Скачанные обновлением данные. Лежат рядом с настройками: в папку
+# программы писать нельзя, а обновляются они чаще самой программы.
+USER_SNAPSHOT_PATH = USER_DIR / "snapshot.json.gz"
+
+
+def snapshot_path():
+    """Какими данными пользоваться.
+
+    Скачанные важнее встроенных: их для того и качали. Но только если
+    они новее — иначе после переустановки программа откатилась бы на
+    старые цифры, уже лежащие в профиле.
+    """
+
+    try:
+        if USER_SNAPSHOT_PATH.stat().st_mtime > SNAPSHOT_PATH.stat().st_mtime:
+            return USER_SNAPSHOT_PATH
+
+    except OSError:
+        pass
+
+    return SNAPSHOT_PATH
 
 
 def build_snapshot():
@@ -149,6 +171,8 @@ def export_snapshot(path=SNAPSHOT_PATH):
     }
 
 
-def load_snapshot(path=SNAPSHOT_PATH):
+def load_snapshot(path=None):
+    path = path or snapshot_path()
+
     with gzip.open(path, "rt", encoding="utf-8") as handle:
         return json.load(handle)

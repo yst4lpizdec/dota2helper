@@ -20,6 +20,7 @@ from gsi.tracker import MatchTracker
 from services.fonts import font_files
 from config import USER_DIR
 from services import setup as setup_check
+from services import updates
 from services.snapshot import SNAPSHOT_PATH
 
 
@@ -285,6 +286,94 @@ class Helper:
 
         return self.engine.item_report(name)
 
+    def updates(self, force=False):
+        """Есть ли что-то новее: данные или сама программа."""
+
+        found = updates.check(force=force)
+
+        snapshot = self.engine.snapshot
+
+        return {
+            "version": updates.VERSION,
+            "patch": snapshot.get("patch"),
+            "matches": snapshot.get("matches"),
+            "built_at": snapshot.get("built_at"),
+            **found,
+        }
+
+    def update_data(self):
+        """Качает свежий snapshot и переучивает движок на ходу.
+
+        Перезапуск не нужен: движок — это загруженный в память словарь,
+        и заменить его можно между двумя пакетами от игры.
+        """
+
+        found = updates.check(force=True)
+
+        if not (found.get("data") or {}).get("url"):
+            return {"error": "свежих данных на GitHub нет"}
+
+        report = updates.download_snapshot(found["data"]["url"])
+
+        engine = Engine()
+
+        with self.lock:
+            self.engine = engine
+            # Прошлая рекомендация посчитана по старым данным.
+            self.result = None
+            self.last_key = None
+
+        print(
+            f"данные обновлены: патч {report['patch']}, "
+            f"{report['matches']} матчей, {report['guides']} гайдов"
+        )
+
+        return {"ok": True, **report}
+
+    def auto_update_data(self, delay=25):
+        """Сам подтягивает свежие данные, без спроса.
+
+        Данные — это не новая программа, а те же цифры за свежую неделю:
+        спрашивать разрешения на полтора мегабайта незачем. Обновление
+        самой программы так не делается — она перезапускается, и это уже
+        дело игрока.
+
+        С задержкой: на старте и так грузится snapshot, поднимается окно
+        и Chromium, лезть туда же с сетью незачем.
+        """
+
+        def later():
+            time.sleep(delay)
+
+            try:
+                found = updates.check()
+
+                if (found.get("data") or {}).get("newer"):
+                    self.update_data()
+
+            except Exception as error:
+                # Обновление не должно мешать работать: не вышло сейчас —
+                # выйдет завтра, проверка идёт раз в сутки.
+                print(f"обновление данных не удалось: {error}")
+
+        threading.Thread(target=later, daemon=True).start()
+
+    def update_app(self):
+        """Скачивает установщик новой версии и запускает его."""
+
+        found = updates.check(force=True)
+
+        if not (found.get("app") or {}).get("url"):
+            return {"error": "новой версии нет"}
+
+        path = updates.download_installer(found["app"]["url"])
+
+        if not updates.run_installer(path):
+            return {"error": "запустить установщик не получилось",
+                    "path": str(path)}
+
+        return {"ok": True, "path": str(path)}
+
     def setup(self):
         """Готова ли Дота отдавать данные — и если нет, то чего не хватает."""
 
@@ -352,6 +441,18 @@ class Handler(BaseHTTPRequestHandler):
         # молча писать в чужую установку игры нельзя. Ответ здесь нужен
         # настоящий, с телом, поэтому ветка стоит до пустого ответа ниже —
         # пакетам от игры отвечать нечем, и им хватает голого 200.
+        # Обновления — тоже с телом ответа, поэтому здесь же, до
+        # пустого ответа пакетам от игры.
+        if self.path.startswith("/update-data"):
+            self.answer(HELPER.update_data())
+
+            return
+
+        if self.path.startswith("/update-app"):
+            self.answer(HELPER.update_app())
+
+            return
+
         if self.path.startswith("/install-config"):
             self.send_body(
                 json.dumps(
@@ -414,8 +515,29 @@ class Handler(BaseHTTPRequestHandler):
                 dump, encoding="utf-8"
             )
 
+    def answer(self, payload):
+        """Ответ с телом на POST: в нём всегда JSON."""
+
+        self.send_body(
+            json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            "application/json; charset=utf-8",
+            cache=False,
+        )
+
     def do_GET(self):
         path = self.path.split("?", 1)[0]
+
+        if path.startswith("/updates"):
+            self.send_body(
+                json.dumps(
+                    HELPER.updates(force="force" in self.path),
+                    ensure_ascii=False,
+                ).encode("utf-8"),
+                "application/json; charset=utf-8",
+                cache=False,
+            )
+
+            return
 
         if path.startswith("/setup"):
             self.send_body(
@@ -686,6 +808,8 @@ def serve_in_background(port=PORT):
 
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
+
+    HELPER.auto_update_data()
 
     return server
 

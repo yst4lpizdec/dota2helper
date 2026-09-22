@@ -23,6 +23,10 @@
          тут нет вовсе. -->
     <section class="setup" id="setup" hidden></section>
 
+    <!-- Обновления. Данные стареют быстрее программы, поэтому они
+         обновляются отдельно и на месте — без установщика. -->
+    <section class="upd" id="upd" hidden></section>
+
     <!-- Что происходит прямо сейчас. Без этого непонятно, почему панель
          не показывается: игра не запущена или приложение не слышит её. -->
     <div class="state" id="state"></div>
@@ -277,6 +281,132 @@
         new ResizeObserver(reportHeight).observe(document.querySelector(".home"));
     }
 
+    /* ---------------- обновления ---------------- */
+
+    var updBox = document.getElementById("upd");
+
+    function updRow(title, note, label, run) {
+        var row = document.createElement("div");
+        row.className = "upd-row";
+
+        var text = document.createElement("div");
+
+        var head = document.createElement("div");
+        head.className = "upd-name";
+        head.textContent = title;
+        text.appendChild(head);
+
+        var sub = document.createElement("div");
+        sub.className = "upd-note";
+        sub.textContent = note;
+        text.appendChild(sub);
+
+        row.appendChild(text);
+
+        var button = document.createElement("button");
+        button.className = "btn primary";
+        button.type = "button";
+        button.textContent = label;
+
+        button.addEventListener("click", function () {
+            button.disabled = true;
+            button.textContent = "качаю…";
+
+            run(button, sub);
+        });
+
+        row.appendChild(button);
+
+        return row;
+    }
+
+    function mb(bytes) {
+        return bytes ? (bytes / 1048576).toFixed(1) + " МБ" : "";
+    }
+
+    function drawUpdates(now) {
+        updBox.innerHTML = "";
+
+        var rows = [];
+
+        if (now.data && now.data.newer) {
+            rows.push(updRow(
+                "Есть свежие данные",
+                "новые матчи и проценты · " + mb(now.data.size),
+                "обновить",
+                function (button, sub) {
+                    fetch("/update-data", { method: "POST", body: "{}" })
+                        .then(function (answer) { return answer.json(); })
+                        .then(function (done) {
+                            if (done.error) { throw new Error(done.error); }
+
+                            button.remove();
+                            sub.textContent = "готово: патч " + done.patch
+                                + ", " + count(done.matches) + " матчей";
+
+                            // Число матчей в шапке уже другое.
+                            loadFacts();
+                        })
+                        .catch(function (error) {
+                            console.error(error);
+                            button.disabled = false;
+                            button.textContent = "ещё раз";
+                        });
+                }
+            ));
+        }
+
+        if (now.app) {
+            rows.push(updRow(
+                "Новая версия " + now.app.version,
+                "у тебя " + now.version + " · " + mb(now.app.size)
+                    + " · программа перезапустится",
+                "обновить",
+                function (button, sub) {
+                    fetch("/update-app", { method: "POST", body: "{}" })
+                        .then(function (answer) { return answer.json(); })
+                        .then(function (done) {
+                            if (done.error) { throw new Error(done.error); }
+
+                            sub.textContent = "установщик запущен";
+                        })
+                        .catch(function (error) {
+                            console.error(error);
+                            button.disabled = false;
+                            button.textContent = "ещё раз";
+                        });
+                }
+            ));
+        }
+
+        if (!rows.length) {
+            updBox.hidden = true;
+
+            return;
+        }
+
+        updBox.hidden = false;
+
+        rows.forEach(function (row) { updBox.appendChild(row); });
+    }
+
+    function checkUpdates(force) {
+        fetch("/updates" + (force ? "?force=1" : ""), { cache: "no-store" })
+            .then(function (answer) { return answer.json(); })
+            .then(function (now) {
+                drawUpdates(now);
+
+                document.getElementById("foot").innerHTML =
+                    'данные — <a href="https://stratz.com/" target="_blank">STRATZ</a>'
+                    + ' &middot; версия ' + now.version
+                    + (now.patch ? " &middot; патч " + now.patch : "")
+                    + " &middot; by yst4l";
+            })
+            .catch(function (error) { console.error(error); });
+    }
+
+    checkUpdates(false);
+
     /* ---------------- что сейчас происходит ---------------- */
 
     var state = document.getElementById("state");
@@ -321,22 +451,24 @@
         reportHeight();
     });
 
-    fetch("/heroes", { cache: "no-store" })
-        .then(function (answer) { return answer.json(); })
-        .then(function (data) {
-            document.getElementById("sub").textContent =
-                count(data.matches) + " матчей · "
-                + data.heroes.length + " героев · данные от "
-                + when(data.built_at);
+    /* Шапка отдельной функцией: после обновления данных её надо
+       перерисовать — число матчей и дата уже другие. */
+    function loadFacts() {
+        fetch("/heroes", { cache: "no-store" })
+            .then(function (answer) { return answer.json(); })
+            .then(function (data) {
+                document.getElementById("sub").textContent =
+                    count(data.matches) + " матчей · "
+                    + data.heroes.length + " героев · данные от "
+                    + when(data.built_at);
+            })
+            .catch(function () {
+                document.getElementById("sub").textContent =
+                    "приложение не отвечает";
+            });
+    }
 
-            document.getElementById("foot").innerHTML =
-                'данные — <a href="https://stratz.com" target="_blank" '
-                + 'rel="noopener">STRATZ</a> &middot; by yst4l';
-        })
-        .catch(function () {
-            document.getElementById("sub").textContent =
-                "приложение не отвечает";
-        });
+    loadFacts();
 }());
 </script>
 </body>

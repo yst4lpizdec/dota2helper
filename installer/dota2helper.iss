@@ -8,7 +8,14 @@
 ; Результат: installer\Output\Dota2Helper-setup.exe
 
 #define AppName "Dota2Helper"
-#define AppVersion "0.1.0"
+
+; Версию передаёт сборка: iscc /DAppVersion=0.2.0
+; Она же лежит в backend/services/updates.py, и автосборка сверяет их
+; между собой — иначе приложение будет считать себя не той версии,
+; которой оно есть, и обновление сломается.
+#ifndef AppVersion
+  #define AppVersion "0.1.0"
+#endif
 #define AppPublisher "yst4l"
 #define AppURL "https://github.com/yst4lpizdec/dota2helper"
 #define AppExe "Dota2Helper.exe"

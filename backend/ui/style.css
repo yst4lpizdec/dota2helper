@@ -1294,6 +1294,33 @@ body.menu { background: #0b0e13; }
 
 .setup-tail { font-size: 11px; color: var(--faint); }
 
+/* ------------------------------------------------------------------ */
+/* обновления                                                           */
+/* ------------------------------------------------------------------ */
+
+/* Не предупреждение, а предложение: цвет спокойный, в отличие от
+   жёлтой карточки «Дота не отдаёт данные». */
+.upd {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--accent-dim);
+    background: rgba(76, 157, 255, 0.07);
+}
+
+.upd-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.upd-name { font-size: 13px; font-weight: 600; color: var(--text); }
+
+.upd-note { margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+
 .state {
     display: flex;
     flex-direction: column;

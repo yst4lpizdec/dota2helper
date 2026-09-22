@@ -1,12 +1,11 @@
 # Сборка установщика на машине GitHub.
 #
-# Запускается на тег вида v0.1.0 и кладёт готовый установщик в релиз.
-# Руками собирать ничего не нужно: поставил тег — забрал файл.
+# Ставишь тег вида v0.1.0 — получаешь готовый установщик в релизе.
+# Руками собирать ничего не нужно.
 #
 # Иконки в репозитории не лежат (47 МБ, качаются из открытого CDN
-# Valve), поэтому перед сборкой их скачивает сам процесс. Snapshot —
-# это данные, его кладут в релиз отдельно и здесь берут из секрета
-# или из артефакта прошлой сборки.
+# Valve), поэтому перед сборкой их скачивает сам процесс. Данные
+# (snapshot) лежат в репозитории — это полтора мегабайта.
 
 name: release
 
@@ -32,28 +31,41 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
 
+      - name: Сверить версию с тегом
+        shell: pwsh
+        run: |
+          # Программа сравнивает свою версию с тегом последнего релиза.
+          # Если они разойдутся, собранное приложение будет считать себя
+          # свежее (или старее), чем есть, и обновление сломается.
+          $code = Get-Content backend/services/updates.py -Raw
+          if ($code -notmatch 'VERSION\s*=\s*"([^"]+)"') {
+            throw "не нашёл VERSION в services/updates.py"
+          }
+          $version = $matches[1]
+          $tag = "${{ github.ref_name }}" -replace '^v', ''
+
+          if ($tag -and $tag -ne $version -and "${{ github.ref_type }}" -eq "tag") {
+            throw "тег $tag не совпадает с VERSION $version в services/updates.py"
+          }
+
+          "version=$version" >> $env:GITHUB_OUTPUT
+        id: version
+
       - name: Скачать иконки
         working-directory: backend
         run: python -c "from services.icons import download_all; print(download_all())"
-
-      - name: Взять snapshot из релиза
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Данные живут отдельно от кода: их кладут ассетом к релизу
-          # snapshot-latest и обновляют, не пересобирая программу.
-          gh release download snapshot-latest --pattern snapshot.json.gz --dir backend/data --clobber
 
       - name: Собрать программу
         run: pyinstaller --noconfirm --clean dota2helper.spec
 
       - name: Собрать установщик
-        run: |
-          & "$env:ProgramFiles(x86)\Inno Setup 6\iscc.exe" installer\dota2helper.iss
         shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\iscc.exe"
+          & $iscc "/DAppVersion=${{ steps.version.outputs.version }}" installer\dota2helper.iss
 
       - name: Положить установщик в релиз
         uses: softprops/action-gh-release@v2
         with:
           files: installer/Output/Dota2Helper-setup.exe
+          fail_on_unmatched_files: true
