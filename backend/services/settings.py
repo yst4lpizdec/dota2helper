@@ -6,10 +6,10 @@
 
 import json
 
-from config import DATA_DIR
+from config import USER_DIR
 
 
-SETTINGS_PATH = DATA_DIR / "settings.json"
+SETTINGS_PATH = USER_DIR / "settings.json"
 
 # Блоки панели, которые игрок может выключить. Порядок — как на самой
 # панели, чтобы список настроек читался вместе с ней.

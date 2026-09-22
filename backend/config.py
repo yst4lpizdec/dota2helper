@@ -1,11 +1,27 @@
 import os
+import sys
 from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = BASE_DIR.parent
+
+# Что лежит рядом с программой: иконки, разметка, snapshot. В собранном
+# приложении это папка установки, и писать туда нельзя — Program Files
+# доступен только на чтение.
 DATA_DIR = BASE_DIR / "data"
+
 DATABASE_PATH = DATA_DIR / "dota2helper.db"
+
+# Куда программа пишет своё: настройки, журнал, снимки пакетов от игры.
+# В исходниках это та же папка data, в установленном приложении —
+# личная папка пользователя, иначе первая же настройка не сохранится.
+if getattr(sys, "frozen", False):
+    USER_DIR = (
+        Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "Dota2Helper"
+    )
+else:
+    USER_DIR = DATA_DIR
 
 ENV_PATH = PROJECT_DIR / ".env"
 

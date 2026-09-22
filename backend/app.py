@@ -18,6 +18,7 @@ from pathlib import Path
 from engine import Engine
 from gsi.tracker import MatchTracker
 from services.fonts import font_files
+from config import USER_DIR
 from services import setup as setup_check
 from services.snapshot import SNAPSHOT_PATH
 
@@ -26,7 +27,9 @@ PORT = 3000
 
 BASE_DIR = Path(__file__).resolve().parent
 
-DUMP_DIR = BASE_DIR / "data" / "gsi"
+# Снимки пакетов от игры — в личную папку: это отладочные данные, и
+# в установленной программе писать их рядом с собой нельзя.
+DUMP_DIR = USER_DIR / "gsi"
 ICONS_DIR = BASE_DIR / "data" / "icons"
 UI_DIR = BASE_DIR / "ui"
 

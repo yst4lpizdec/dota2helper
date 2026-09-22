@@ -34,6 +34,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from config import USER_DIR
 from services import dota, settings as settings_store
 from services.single_instance import SingleInstance
 from services.winapi import MOD_ALT, MOD_CONTROL, Hotkeys, set_click_through
@@ -902,7 +903,7 @@ def open_log():
     if sys.stdout is not None:
         return
 
-    path = Path(__file__).resolve().parent / "data" / "helper.log"
+    path = USER_DIR / "helper.log"
 
     try:
         path.parent.mkdir(parents=True, exist_ok=True)

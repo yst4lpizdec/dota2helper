@@ -1,0 +1,59 @@
+# Сборка установщика на машине GitHub.
+#
+# Запускается на тег вида v0.1.0 и кладёт готовый установщик в релиз.
+# Руками собирать ничего не нужно: поставил тег — забрал файл.
+#
+# Иконки в репозитории не лежат (47 МБ, качаются из открытого CDN
+# Valve), поэтому перед сборкой их скачивает сам процесс. Snapshot —
+# это данные, его кладут в релиз отдельно и здесь берут из секрета
+# или из артефакта прошлой сборки.
+
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Поставить зависимости
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Скачать иконки
+        working-directory: backend
+        run: python -c "from services.icons import download_all; print(download_all())"
+
+      - name: Взять snapshot из релиза
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Данные живут отдельно от кода: их кладут ассетом к релизу
+          # snapshot-latest и обновляют, не пересобирая программу.
+          gh release download snapshot-latest --pattern snapshot.json.gz --dir backend/data --clobber
+
+      - name: Собрать программу
+        run: pyinstaller --noconfirm --clean dota2helper.spec
+
+      - name: Собрать установщик
+        run: |
+          & "$env:ProgramFiles(x86)\Inno Setup 6\iscc.exe" installer\dota2helper.iss
+        shell: pwsh
+
+      - name: Положить установщик в релиз
+        uses: softprops/action-gh-release@v2
+        with:
+          files: installer/Output/Dota2Helper-setup.exe
