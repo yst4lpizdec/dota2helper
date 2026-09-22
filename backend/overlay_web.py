@@ -426,6 +426,9 @@ class Overlay(QWidget):
         # Панель закрыли вручную: до конца матча не показываем её снова,
         # иначе она вернётся сама через пару секунд, по таймеру.
         self.dismissed = False
+        # Наоборот: показать вне матча, потому что попросили. Держится
+        # до ближайшей смены обстановки, а не вечно.
+        self.forced = False
         self.escape = Escape(lambda: self.set_click_through(False))
         self.browser = None
         self.menu = None
@@ -568,7 +571,7 @@ class Overlay(QWidget):
     def open_browser(self):
         if self.browser is None:
             self.browser = Page(
-                "Dota2Helper — справочник", BROWSE_URL, (1040, 700)
+                "Dota2Helper — справочник", BROWSE_URL, (1180, 760)
             )
 
         self.browser.reopen()
@@ -609,6 +612,34 @@ class Overlay(QWidget):
         print("значок в трее поставлен")
 
         return tray
+
+    def announce_update(self, found):
+        """Сообщает, что есть что обновить.
+
+        Приходит из фонового потока, поэтому в главный возвращаемся
+        таймером: трогать окна не из своего потока Qt не разрешает.
+        """
+
+        QTimer.singleShot(0, lambda: self._show_update_note(found))
+
+    def _show_update_note(self, found):
+        if self.tray is None:
+            return
+
+        if found.get("app"):
+            text = f"Новая версия {found['app']['version']} — нажми, чтобы обновить"
+        else:
+            text = "Есть свежие данные — нажми, чтобы обновить"
+
+        self.tray.showMessage("Dota2Helper", text, QSystemTrayIcon.Information, 10000)
+
+        # По нажатию на само сообщение открываем меню: кнопки обновления
+        # там, а значок у часов Windows ещё и прячет под стрелку.
+        try:
+            self.tray.messageClicked.connect(self.open_menu)
+
+        except (TypeError, RuntimeError):
+            pass
 
     def on_tray(self, reason):
         if reason == QSystemTrayIcon.Trigger:
@@ -677,17 +708,15 @@ class Overlay(QWidget):
             self.menu.reopen()
 
     def show_overlay(self):
-        """Показывает панель по просьбе из меню.
+        """Показывает панель по просьбе из меню или из значка в трее.
 
-        Если включено «прятать без Доты», а игры нет, панель тут же
-        спряталась бы обратно — поэтому в таком случае настройку снимаем:
-        игрок только что попросил обратное.
+        Настройку «только в матче» при этом не трогаем. Раньше трогали —
+        и «показать сейчас» молча отменяло правило навсегда: человек один
+        раз посмотрел панель, а она потом висела на рабочем столе всегда.
+        Просьба показать сейчас — про сейчас, а не про правило.
         """
 
-        if self.hide_without_dota and not self.match_in_progress():
-            self.set_hide_without_dota(False)
-            self.run("window.__setHideWithoutDota && window.__setHideWithoutDota(false)")
-
+        self.forced = True
         self.dismissed = False
 
         self.set_panel_visible(True)
@@ -762,10 +791,14 @@ class Overlay(QWidget):
         if not live:
             self.dismissed = False
 
+        # А матч начался — забываем и ручной показ: дальше решает правило.
+        if live:
+            self.forced = False
+
         if self.dismissed:
             return
 
-        if not self.hide_without_dota:
+        if not self.hide_without_dota or self.forced:
             self.set_panel_visible(True)
 
             return
@@ -879,6 +912,7 @@ class Overlay(QWidget):
 
         self.escape.hide()
         self.dismissed = True
+        self.forced = False
 
         self.set_panel_visible(False)
 
@@ -971,6 +1005,17 @@ def main():
     # Показываем панель, только если решено её показывать: иначе она
     # мигает на рабочем столе на первой секунде запуска.
     window.check_dota()
+
+    # Проверить — и сказать. Само ничего не качается, а меню может быть
+    # закрыто, поэтому говорим значком у часов. Здесь, а не рядом с
+    # приёмником: окна к тому моменту ещё нет.
+    try:
+        import app as helper
+
+        helper.HELPER.look_for_updates(on_found=window.announce_update)
+
+    except Exception as error:
+        print(f"проверка обновлений не запустилась: {error}")
 
     # Запустили приложение, а матча нет — человек пришёл не за панелью,
     # а в само приложение. Показываем ему главное меню.

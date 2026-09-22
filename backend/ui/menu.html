@@ -4,16 +4,30 @@
 <meta charset="utf-8">
 <title>Dota2Helper</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/windows.css">
 <link rel="icon" href="/app-icon.png">
 </head>
 <body class="menu">
 
 <div class="home">
-    <header class="home-head">
-        <div>
-            <div class="home-name">Dota2Helper</div>
-            <div class="home-sub" id="sub">загружаю…</div>
+    <!-- Шапка с портретом героя. Портрет — из наших же иконок, размытый
+         до фона: показывать в главном окне героя, а не пустой градиент,
+         стоит ровно одну строку кода, а окно сразу перестаёт выглядеть
+         технической утилитой. -->
+    <header class="hero-banner">
+        <div class="hero-art" id="hero-art"></div>
+
+        <div class="hero-text">
+            <h1>Dota2Helper</h1>
+            <p id="sub">загружаю…</p>
+
+            <button class="big-btn" id="play" type="button">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5 13 8l-9 5.5z" fill="currentColor"/></svg>
+                Запустить Dota 2
+            </button>
+
+            <div class="big-btn-note">через Steam</div>
         </div>
     </header>
 
@@ -23,42 +37,42 @@
          тут нет вовсе. -->
     <section class="setup" id="setup" hidden></section>
 
-    <!-- Обновления. Данные стареют быстрее программы, поэтому они
-         обновляются отдельно и на месте — без установщика. -->
+    <!-- Обновления: данные и программа отдельно. -->
     <section class="upd" id="upd" hidden></section>
 
-    <!-- Что происходит прямо сейчас. Без этого непонятно, почему панель
-         не показывается: игра не запущена или приложение не слышит её. -->
-    <div class="state" id="state"></div>
-
     <div class="tiles">
-        <button class="tile wide" id="play" type="button">
-            <span class="tile-name">Запустить Dota 2</span>
-            <span class="tile-note">через Steam</span>
-        </button>
-
         <button class="tile" id="browse" type="button">
+            <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
             <span class="tile-name">Справочник</span>
-            <span class="tile-note">герои, предметы, проценты</span>
+            <span class="tile-note">герои и сборки</span>
         </button>
 
         <button class="tile" id="overlay" type="button">
+            <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="5.6" y="7.6" width="6" height="8.8" rx="1" fill="currentColor" opacity=".55"/></svg></span>
             <span class="tile-name">Показать панель</span>
             <span class="tile-note">поверх игры</span>
         </button>
 
         <button class="tile" id="opts" type="button">
+            <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
             <span class="tile-name">Настройки</span>
-            <span class="tile-note">прозрачность, размер, что показывать</span>
+            <span class="tile-note">вид и поведение</span>
         </button>
 
-        <button class="tile quit" id="quit" type="button">
-            <span class="tile-name">Выход</span>
-            <span class="tile-note">закрыть приложение целиком</span>
+        <button class="tile" id="about" type="button">
+            <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 11v5.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="7.9" r="1.1" fill="currentColor"/></svg></span>
+            <span class="tile-name">О приложении</span>
+            <span class="tile-note" id="about-note">версия</span>
         </button>
     </div>
 
-    <footer class="home-foot" id="foot"></footer>
+    <!-- Раскрывается по «О приложении»: в обычном состоянии эти цифры
+         только шумят. -->
+    <section class="about" id="about-card" hidden></section>
+
+    <!-- Строка состояния внизу: почему панель не показывается — игра не
+         запущена или приложение её не слышит. -->
+    <footer class="status" id="state"></footer>
 </div>
 
 <script>
@@ -118,8 +132,12 @@
         tell("openSettings");
     });
 
-    document.getElementById("quit").addEventListener("click", function () {
-        tell("quit");
+    document.getElementById("about").addEventListener("click", function () {
+        var card = document.getElementById("about-card");
+
+        card.hidden = !card.hidden;
+
+        reportHeight();
     });
 
     /* ---------------- готова ли Дота отдавать данные ---------------- */
@@ -163,7 +181,7 @@
     function drawSetup(now) {
         /* Пакеты от игры доказывают, что всё работает, лучше любой
            проверки файлов: если они идут, придираться не к чему. */
-        if (now.ready) {
+        if (now.ready && !setupForced) {
             setupBox.hidden = true;
 
             return;
@@ -172,9 +190,13 @@
         setupBox.hidden = false;
         setupBox.innerHTML = "";
 
+        setupBox.classList.toggle("fine", !!now.ready);
+
         var head = document.createElement("div");
         head.className = "setup-head";
-        head.textContent = "Dota ещё не отдаёт данные";
+        head.textContent = now.ready
+            ? "Подключение в порядке"
+            : "Dota ещё не отдаёт данные";
         setupBox.appendChild(head);
 
         if (!now.dota_found) {
@@ -245,12 +267,18 @@
 
         var tail = document.createElement("div");
         tail.className = "setup-tail";
-        tail.textContent = "как только игра пришлёт первый пакет, "
-            + "эта карточка исчезнет сама";
+        tail.textContent = now.ready
+            ? "игра присылала данные — всё работает"
+            : "как только игра пришлёт первый пакет, "
+                + "эта карточка исчезнет сама";
         setupBox.appendChild(tail);
     }
 
-    function checkSetup() {
+    var setupForced = false;
+
+    function checkSetup(force) {
+        if (force) { setupForced = true; }
+
         fetch("/setup", { cache: "no-store" })
             .then(function (answer) { return answer.json(); })
             .then(drawSetup)
@@ -390,35 +418,129 @@
         rows.forEach(function (row) { updBox.appendChild(row); });
     }
 
+    /* «О приложении»: версия, на чём стоят цифры и куда идти за исходниками.
+       В свёрнутом виде — только номер версии на плитке. */
+    function drawAbout(now) {
+        document.getElementById("about-note").textContent =
+            "версия " + now.version;
+
+        var card = document.getElementById("about-card");
+        var was = card.hidden;
+
+        card.innerHTML =
+            '<div class="about-grid">'
+            + '<div><span>Версия</span><b>' + now.version + '</b></div>'
+            + '<div><span>Патч данных</span><b>' + (now.patch || "—") + '</b></div>'
+            + '<div><span>Матчей разобрано</span><b>'
+            + count(now.matches || 0) + '</b></div>'
+            + '<div><span>Данные собраны</span><b>'
+            + when(now.built_at) + '</b></div>'
+            + '</div>'
+            + '<div class="about-links">'
+            + '<a href="https://github.com/yst4lpizdec/dota2helper" target="_blank" rel="noopener">Исходный код</a>'
+            + '<a href="https://stratz.com/" target="_blank" rel="noopener">Данные — STRATZ</a>'
+            + '</div>';
+
+        var check = document.createElement("button");
+        check.type = "button";
+        check.className = "btn";
+        check.textContent = "проверить обновления";
+
+        check.addEventListener("click", function () {
+            check.disabled = true;
+            check.textContent = "смотрю…";
+
+            checkUpdates(true);
+
+            setTimeout(function () {
+                check.disabled = false;
+                check.textContent = "проверить обновления";
+            }, 2500);
+        });
+
+        card.appendChild(check);
+        card.hidden = was;
+
+        reportHeight();
+    }
+
     function checkUpdates(force) {
         fetch("/updates" + (force ? "?force=1" : ""), { cache: "no-store" })
             .then(function (answer) { return answer.json(); })
             .then(function (now) {
                 drawUpdates(now);
 
-                document.getElementById("foot").innerHTML =
-                    'данные — <a href="https://stratz.com/" target="_blank">STRATZ</a>'
-                    + ' &middot; версия ' + now.version
-                    + (now.patch ? " &middot; патч " + now.patch : "")
-                    + " &middot; by yst4l";
+                drawAbout(now);
             })
             .catch(function (error) { console.error(error); });
     }
 
     checkUpdates(false);
 
+    /* Портрет в шапке — из наших же иконок, размытый до фона. Герой
+       случайный: окно каждый раз выглядит чуть иначе, а качать что-то
+       ради картинки не приходится. */
+    fetch("/heroes", { cache: "no-store" })
+        .then(function (answer) { return answer.json(); })
+        .then(function (data) {
+            var list = data.heroes || [];
+
+            if (!list.length) { return; }
+
+            var pick = list[Math.floor(Math.random() * list.length)];
+
+            document.getElementById("hero-art").style.backgroundImage =
+                "url(/icons/heroes/" + pick.hero + ".png)";
+        })
+        .catch(function () {});
+
     /* ---------------- что сейчас происходит ---------------- */
 
     var state = document.getElementById("state");
 
-    function line(ok, text) {
-        var row = document.createElement("div");
-        row.className = "state-row" + (ok ? " ok" : "");
+    /* Три состояния вместо двух: серое — «не сейчас», зелёное — «работает»,
+       красное — «сломано и требует внимания». Отсутствие Доты не ошибка:
+       человек может зайти в приложение между играми. */
+    function line(mark, text) {
+        var row = document.createElement("span");
+        row.className = "st-row " + mark;
+
         var dot = document.createElement("span");
-        dot.className = "state-dot";
+        dot.className = "st-dot";
         row.appendChild(dot);
+
         row.appendChild(document.createTextNode(text));
+
         return row;
+    }
+
+    function links() {
+        var box = document.createElement("span");
+        box.className = "st-links";
+
+        var more = document.createElement("button");
+        more.type = "button";
+        more.className = "st-link";
+        more.textContent = "Подробнее о подключении";
+
+        more.addEventListener("click", function () {
+            // Карточка сама прячется, когда всё настроено, — по этой
+            // ссылке её показываем принудительно.
+            checkSetup(true);
+        });
+
+        box.appendChild(more);
+
+        var quit = document.createElement("button");
+        quit.type = "button";
+        quit.className = "st-link quit";
+        quit.textContent = "Выход";
+
+        quit.addEventListener("click", function () { tell("quit"); });
+
+        box.appendChild(quit);
+
+        return box;
     }
 
     function refresh() {
@@ -430,15 +552,21 @@
             try { now = JSON.parse(raw); } catch (error) { return; }
 
             state.innerHTML = "";
-            state.appendChild(line(now.dota, now.dota
-                ? (now.match ? "идёт матч" : "Dota 2 запущена, матча нет")
-                : "Dota 2 не запущена"));
-            state.appendChild(line(now.server, now.server
-                ? "приёмник данных работает"
-                : "приёмник данных не отвечает"));
-            state.appendChild(line(now.overlay, now.overlay
-                ? "панель на экране"
-                : "панель скрыта"));
+
+            state.appendChild(line(
+                now.match ? "ok" : (now.dota ? "idle" : "off"),
+                now.match ? "идёт матч"
+                    : (now.dota ? "Dota 2 запущена, матча нет"
+                                : "Dota 2 не запущена")));
+
+            state.appendChild(line(now.server ? "ok" : "bad",
+                now.server ? "приёмник данных работает"
+                           : "приёмник данных не отвечает"));
+
+            state.appendChild(line(now.overlay ? "ok" : "idle",
+                now.overlay ? "панель на экране" : "панель скрыта"));
+
+            state.appendChild(links());
         });
     }
 

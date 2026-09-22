@@ -1,0 +1,813 @@
+/* Обычные окна приложения: главное окно и справочник.
+   Общее — в base.css, игровая панель — в panel.css. */
+
+/* справочник — отдельное окно, а не оверлей                           */
+/* ------------------------------------------------------------------ */
+
+/* Здесь нет прозрачности и поверх-игры: это обычное окно, в котором
+   смотрят статистику между матчами. Поэтому вместо лент со значками —
+   таблицы с названиями и числами: места хватает. */
+
+body.browse {
+    background: #0b0e13;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: var(--glass-top);
+    border-bottom: 1px solid var(--line);
+    flex: none;
+}
+
+.top-title { font-size: 14px; font-weight: 650; color: var(--text); }
+
+.search {
+    flex: 1 1 auto;
+    max-width: 340px;
+    padding: 7px 11px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.search::placeholder { color: var(--faint); }
+.search:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+.source { margin-left: auto; font-size: 11px; color: var(--faint); }
+.source b { color: var(--muted); font-weight: 600; }
+.source a { color: var(--accent); text-decoration: none; }
+.source a:hover { text-decoration: underline; }
+
+.split { display: flex; flex: 1 1 auto; min-height: 0; }
+
+.roster {
+    flex: none;
+    width: 250px;
+    overflow-y: auto;
+    padding: 8px;
+    border-right: 1px solid var(--line);
+}
+
+.pick {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 5px 7px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.pick:hover { background: var(--card-lift); color: var(--text); }
+.pick:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pick.on { background: var(--accent-dim); color: var(--text); }
+
+.pick-art {
+    width: 42px;
+    height: 24px;
+    flex: none;
+    object-fit: cover;
+    border-radius: 4px;
+    background: var(--slot-bg);
+}
+
+.pick-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.guide { flex: 1 1 auto; overflow-y: auto; padding: 14px 16px 24px; }
+
+.empty {
+    padding: 40px 16px;
+    text-align: center;
+    color: var(--faint);
+    font-size: 13px;
+}
+
+.guide-page { display: flex; flex-direction: column; gap: 10px; max-width: 760px; }
+
+.guide-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 4px;
+}
+
+.guide-art {
+    width: 84px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: var(--slot-bg);
+}
+
+.guide-name {
+    font-size: 19px;
+    font-weight: 650;
+    color: var(--text);
+    text-transform: capitalize;
+}
+
+.guide-facts {
+    display: flex;
+    gap: 8px;
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.guide-facts b { color: var(--text); }
+.guide-head .roles { margin-left: auto; flex-wrap: wrap; gap: 4px; }
+.guide-head .role { height: auto; padding: 4px 9px; font-size: 12px; }
+
+/* Заголовок карточки, который ничего не сворачивает. */
+.card-head.static { cursor: default; }
+.card-head.static:hover { background: none; }
+
+.grid { display: flex; flex-direction: column; }
+
+.grid-row {
+    display: grid;
+    grid-template-columns: 34px 1fr repeat(3, 84px);
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.grid-row:last-child { border-bottom: 0; }
+
+.grid-head {
+    padding-bottom: 6px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--faint);
+}
+
+.grid-head:hover { background: none; }
+
+.grid-art {
+    width: 34px;
+    height: 34px;
+    object-fit: cover;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background: var(--slot-bg);
+}
+
+.grid-name { font-size: 13px; color: var(--text); }
+
+.grid-note {
+    margin-left: 7px;
+    font-size: 11px;
+    color: var(--faint);
+}
+
+.grid .num {
+    text-align: right;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.browse .skill img { width: 44px; height: 44px; }
+
+/* Одиночная галочка в настройках — не из сетки «что показывать». */
+.switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.switch input {
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    flex: none;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+}
+
+.switch input:checked {
+    background: var(--accent)
+        url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'>\
+<path d='M2.5 6.2 L4.8 8.5 L9.5 3.6' fill='none' stroke='%230a1220' \
+stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>")
+        center / 11px 11px no-repeat;
+    border-color: var(--accent);
+}
+
+.switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.switch:has(input:checked) { color: var(--text); }
+
+/* Откуда взяты цифры. STRATZ просит об упоминании — и это честно. */
+.credit { margin-left: auto; color: var(--faint); }
+
+/* Переключатель «герои / предметы» в справочнике. */
+.modes { display: flex; gap: 2px; flex: none; }
+
+.mode {
+    appearance: none;
+    padding: 6px 12px;
+    border: 0;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--faint);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mode:hover { color: var(--text); background: rgba(255, 255, 255, 0.1); }
+.mode:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mode.on { background: var(--accent); color: #0a1220; }
+
+.pick-item {
+    width: 34px;
+    height: 34px;
+    flex: none;
+    object-fit: cover;
+    border-radius: 5px;
+    background: var(--slot-bg);
+}
+
+/* Сколько сборок знает про предмет — прижато вправо, мелко. */
+.pick-tail {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+}
+
+.guide-art.item { width: 64px; height: 48px; object-fit: contain; }
+.grid-art.hero { width: 34px; height: 20px; }
+
+.grid-role { font-size: 12px; color: var(--muted); }
+
+.grid .num.up   { color: var(--good); }
+.grid .num.down { color: #e07b6a; }
+
+/* Пояснение вместо пустого места: почему по предмету ничего нет. */
+.notice {
+    padding: 14px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--line-soft);
+    background: var(--card);
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+    max-width: 560px;
+}
+
+.notice-head {
+    margin-bottom: 5px;
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--text);
+}
+
+/* ------------------------------------------------------------------ */
+/* главное меню — то, что видно, когда приложение просто запущено      */
+/* ------------------------------------------------------------------ */
+
+body.menu { background: #0b0e13; }
+
+.home {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 0 22px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ------------------------------------------------------------------ */
+/* шапка с портретом                                                    */
+/* ------------------------------------------------------------------ */
+
+/* Портрет живёт фоном и уходит в размытие: иконка героя маленькая, во
+   весь баннер она была бы мыльной, а размытая читается как свет от
+   игры — именно то, что нужно за текстом. */
+.hero-banner {
+    position: relative;
+    margin: 0 -22px;
+    padding: 34px 22px 28px;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.hero-art {
+    position: absolute;
+    inset: -40px -10px auto -10px;
+    height: 230px;
+    background-size: cover;
+    background-position: center 22%;
+    filter: blur(26px) saturate(1.45);
+    opacity: 0.72;
+    transform: scale(1.2);
+}
+
+/* Тень поверх портрета: без неё текст ложится на случайные пятна. */
+.hero-banner::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        180deg,
+        rgba(11, 14, 19, 0.28) 0%,
+        rgba(11, 14, 19, 0.72) 58%,
+        #0b0e13 100%
+    );
+}
+
+.hero-text { position: relative; z-index: 1; }
+
+.hero-text h1 {
+    margin: 0;
+    font-size: 27px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.hero-text p {
+    margin: 5px 0 17px;
+    font-size: 12.5px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.big-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 11px 22px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #08111e;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: background-color 0.13s ease, transform 0.13s ease;
+}
+
+.big-btn svg { width: 15px; height: 15px; }
+
+.big-btn:hover { background: var(--accent-lit); }
+.big-btn:active { transform: translateY(1px); }
+.big-btn:focus-visible { outline: 2px solid var(--accent-lit); outline-offset: 2px; }
+
+.big-btn-note {
+    position: relative;
+    z-index: 1;
+    margin-top: 7px;
+    font-size: 11px;
+    color: var(--faint);
+}
+
+/* ------------------------------------------------------------------ */
+/* плитки                                                               */
+/* ------------------------------------------------------------------ */
+
+.tiles {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 9px;
+}
+
+.tile {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 15px 14px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--line-soft);
+    background: var(--card);
+    color: inherit;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.13s ease, border-color 0.13s ease;
+}
+
+.tile:hover { background: var(--card-lift); border-color: var(--line); }
+.tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.tile-icon { color: var(--accent); margin-bottom: 4px; }
+.tile-icon svg { width: 21px; height: 21px; display: block; }
+
+.tile-name { font-size: 12.5px; font-weight: 650; color: var(--text); }
+.tile-note {
+    font-size: 10.5px;
+    line-height: 1.35;
+    color: var(--faint);
+}
+
+/* ------------------------------------------------------------------ */
+/* о приложении                                                         */
+/* ------------------------------------------------------------------ */
+
+.about {
+    padding: 14px 16px;
+    border-radius: 9px;
+    border: 1px solid var(--line-soft);
+    background: var(--card);
+}
+
+.about-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 18px;
+}
+
+.about-grid div { display: flex; justify-content: space-between; gap: 10px; }
+.about-grid span { font-size: 11.5px; color: var(--faint); }
+.about-grid b {
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.about-links {
+    display: flex;
+    gap: 14px;
+    margin: 13px 0 11px;
+    padding-top: 11px;
+    border-top: 1px solid var(--line-soft);
+}
+
+.about-links a {
+    font-size: 11.5px;
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.about-links a:hover { text-decoration: underline; }
+
+/* ------------------------------------------------------------------ */
+/* строка состояния                                                     */
+/* ------------------------------------------------------------------ */
+
+/* Внизу и в одну строку: это фон, а не содержание. Раньше три состояния
+   стояли карточкой посреди окна и весили столько же, сколько кнопки. */
+.status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px 18px;
+    margin-top: 2px;
+    padding-top: 13px;
+    border-top: 1px solid var(--line-soft);
+    font-size: 11.5px;
+}
+
+.st-row { display: inline-flex; align-items: center; gap: 7px; color: var(--faint); }
+
+.st-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--faint);
+}
+
+.st-row.ok { color: var(--text); }
+.st-row.ok .st-dot { background: var(--good); }
+
+/* Красный — только то, что действительно сломано. Выключенная Дота не
+   поломка: человек может зайти сюда между играми. */
+.st-row.bad { color: #ff9b8f; }
+.st-row.bad .st-dot { background: #ff6b5b; }
+
+.st-links { margin-left: auto; display: inline-flex; gap: 14px; }
+
+.st-link {
+    border: 0;
+    padding: 0;
+    background: none;
+    font-family: inherit;
+    font-size: 11.5px;
+    color: var(--accent);
+    cursor: pointer;
+}
+
+.st-link:hover { text-decoration: underline; }
+.st-link.quit { color: var(--faint); }
+.st-link.quit:hover { color: #ff9b8f; }
+
+/* ------------------------------------------------------------------ */
+/* карточка «Дота ещё не отдаёт данные»                                */
+/* ------------------------------------------------------------------ */
+
+/* Она стоит выше всего остального и выглядит как предупреждение, а не
+   как ещё один раздел: пока её условия не выполнены, всё остальное в
+   приложении бесполезно. */
+.setup {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 13px 15px;
+    border-radius: 8px;
+    border: 1px solid rgba(240, 180, 41, 0.35);
+    background: rgba(240, 180, 41, 0.07);
+}
+
+.setup-head {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gold);
+}
+
+/* Ту же карточку можно открыть, когда всё в порядке, — тогда она не
+   предупреждение, а справка, и цвет у неё спокойный. */
+.setup.fine {
+    border-color: var(--line-soft);
+    background: var(--card);
+}
+
+.setup.fine .setup-head { color: var(--good); }
+
+.setup-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: 12px;
+}
+
+.setup-mark {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    margin-top: 1px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 16px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #0a1220;
+    background: var(--gold);
+}
+
+.setup-step.ok .setup-mark { background: var(--good); }
+
+.setup-step-name { color: var(--text); font-weight: 600; }
+
+.setup-step-note {
+    margin-top: 3px;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--muted);
+}
+
+.setup-step-note.faint {
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+}
+
+.setup-step-note b { color: var(--accent-lit); }
+
+.setup-btn { margin-top: 7px; }
+
+.setup-tail { font-size: 11px; color: var(--faint); }
+
+/* ------------------------------------------------------------------ */
+/* обновления                                                           */
+/* ------------------------------------------------------------------ */
+
+/* Не предупреждение, а предложение: цвет спокойный, в отличие от
+   жёлтой карточки «Дота не отдаёт данные». */
+.upd {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--accent-dim);
+    background: rgba(76, 157, 255, 0.07);
+}
+
+.upd-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.upd-name { font-size: 13px; font-weight: 600; color: var(--text); }
+
+.upd-note { margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+
+/* Настройки, открытые из главного меню: панели за ними нет. */
+body.solo #panel { display: none; }
+body.solo .stage { gap: 0; }
+
+/* ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ */
+/* страница героя: шапка, вкладки, колонки сборки                       */
+/* ------------------------------------------------------------------ */
+
+.hero-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 4px 2px 16px;
+}
+
+.hero-face {
+    width: 92px;
+    border-radius: 8px;
+    background: var(--slot-bg);
+    flex: none;
+}
+
+.hero-titles { flex: 1; min-width: 0; }
+
+.hero-name {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+}
+
+.hero-facts {
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.hero-facts b { color: var(--good); font-weight: 650; }
+
+/* Вкладки: подчёркивание вместо кнопок — они переключают вид одной и
+   той же страницы, а не уводят в другой раздел. */
+.tabs {
+    display: flex;
+    gap: 22px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.tab {
+    position: relative;
+    padding: 0 0 9px;
+    border: 0;
+    background: none;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--faint);
+    cursor: pointer;
+}
+
+.tab:hover { color: var(--muted); }
+
+.tab.on { color: var(--text); }
+
+.tab.on::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+}
+
+/* Колонки — это фазы игры. Слева направо читается как время: старт,
+   ранняя, кор, поздняя. */
+.cols {
+    display: grid;
+    /* Ровно четыре: это фазы игры, и они должны стоять в один ряд как
+       лента времени. Само-раскладка ломала порядок — «поздняя» уезжала
+       на вторую строку и читалась как что-то отдельное. */
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: start;
+}
+
+.cols.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+@media (max-width: 980px) {
+    .cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cols.two { grid-template-columns: 1fr; }
+}
+
+.col {
+    border-radius: 10px;
+    border: 1px solid var(--line-soft);
+    background: var(--card);
+    overflow: hidden;
+}
+
+.col-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 11px 13px 9px;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.col-title { font-size: 12px; font-weight: 650; color: var(--text); }
+
+.col-note {
+    font-size: 10.5px;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.col-list { padding: 6px; }
+
+.line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 7px;
+    cursor: help;
+}
+
+.line:hover { background: var(--card-lift); }
+
+.line-art {
+    width: 30px;
+    border-radius: 4px;
+    background: var(--slot-bg);
+    flex: none;
+}
+
+.line-body { flex: 1; min-width: 0; }
+
+.line-name {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.25;
+}
+
+/* Роль — в одну строку с многоточием: в узкой колонке она иначе
+   разваливается на три строки и рвёт ряд. Целиком её видно в подсказке. */
+.line-role,
+.line-why {
+    font-size: 10px;
+    line-height: 1.3;
+    color: var(--faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.line-why { color: var(--accent-lit); }
+
+.line-tail {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    flex: none;
+    font-variant-numeric: tabular-nums;
+}
+
+.line-share { font-size: 11px; font-weight: 600; color: var(--text); }
+.line-time { font-size: 10px; color: var(--time); }
+.line-gold { font-size: 10px; color: var(--gold); }
+
+/* Доля талантов справа: видно, насколько выбор однозначный. */
+.talent .tshare {
+    margin-left: auto;
+    font-size: 10.5px;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+}

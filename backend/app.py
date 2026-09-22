@@ -330,16 +330,11 @@ class Helper:
 
         return {"ok": True, **report}
 
-    def auto_update_data(self, delay=25):
-        """Сам подтягивает свежие данные, без спроса.
+    def look_for_updates(self, delay=25, on_found=None):
+        """Смотрит, нет ли свежих данных или новой версии, и только.
 
-        Данные — это не новая программа, а те же цифры за свежую неделю:
-        спрашивать разрешения на полтора мегабайта незачем. Обновление
-        самой программы так не делается — она перезапускается, и это уже
-        дело игрока.
-
-        С задержкой: на старте и так грузится snapshot, поднимается окно
-        и Chromium, лезть туда же с сетью незачем.
+        Ничего не качает: решение за игроком. Задержка — чтобы не лезть
+        в сеть одновременно с загрузкой snapshot и подъёмом окна.
         """
 
         def later():
@@ -348,13 +343,16 @@ class Helper:
             try:
                 found = updates.check()
 
-                if (found.get("data") or {}).get("newer"):
-                    self.update_data()
-
             except Exception as error:
-                # Обновление не должно мешать работать: не вышло сейчас —
-                # выйдет завтра, проверка идёт раз в сутки.
-                print(f"обновление данных не удалось: {error}")
+                print(f"проверка обновлений не удалась: {error}")
+
+                return
+
+            has_data = bool((found.get("data") or {}).get("newer"))
+            has_app = bool(found.get("app"))
+
+            if (has_data or has_app) and on_found:
+                on_found(found)
 
         threading.Thread(target=later, daemon=True).start()
 
@@ -579,9 +577,11 @@ class Handler(BaseHTTPRequestHandler):
 
             return
 
-        if path == "/style.css":
-            # Стили общие у панели и справочника, поэтому отдельным файлом.
-            self.send_file(UI_DIR / "style.css", "text/css; charset=utf-8", cache=False)
+        # Стили разнесены: общее, игровая панель и обычные окна.
+        if path in ("/base.css", "/panel.css", "/windows.css"):
+            self.send_file(
+                UI_DIR / path.lstrip("/"), "text/css; charset=utf-8", cache=False
+            )
 
             return
 
@@ -808,8 +808,6 @@ def serve_in_background(port=PORT):
 
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
-
-    HELPER.auto_update_data()
 
     return server
 

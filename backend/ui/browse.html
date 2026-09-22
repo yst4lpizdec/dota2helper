@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <title>Dota2Helper — справочник</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/windows.css">
 <link rel="icon" href="/app-icon.png">
 </head>
 <body class="browse">
@@ -269,58 +270,6 @@
     /* Таблица вместо ленты значков: здесь есть место под названия и
        числа, а вопрос «что, когда и в скольких играх» — это именно
        колонки, а не иконки подряд. */
-    function table(entries, columns) {
-        var box = el("div", "grid");
-
-        // Колонок бывает две или три — раскладку задаём по месту.
-        var template = "34px 1fr repeat(" + columns.length + ", 84px)";
-
-        function row(cls) {
-            var node = el("div", cls);
-            node.style.gridTemplateColumns = template;
-            return node;
-        }
-
-        var head = row("grid-row grid-head");
-        head.appendChild(el("span", "", ""));
-        head.appendChild(el("span", "", "предмет"));
-        columns.forEach(function (column) {
-            head.appendChild(el("span", "num", column[0]));
-        });
-        box.appendChild(head);
-
-        entries.forEach(function (entry) {
-            var line = row("grid-row");
-
-            line.appendChild(artwork("items", entry.item, "grid-art"));
-
-            var name = el("span", "grid-name", entry.display || entry.item);
-
-            if (entry.alt_to) {
-                name.appendChild(el("span", "grid-note",
-                    "вместо " + entry.alt_to));
-            }
-
-            // Зачем предмет нужен. Для половины списка это очевидно, для
-            // второй половины — единственное, что отличает совет от
-            // списка картинок.
-            if (entry.role) {
-                name.appendChild(el("span", "grid-note", entry.role));
-            }
-
-            line.appendChild(name);
-
-            columns.forEach(function (column) {
-                line.appendChild(el("span", "num " + (column[2] || ""),
-                    column[1](entry)));
-            });
-
-            box.appendChild(line);
-        });
-
-        return box;
-    }
-
     function block(title, meta, body) {
         var card = el("section", "card");
         var head = el("div", "card-head static");
@@ -333,6 +282,224 @@
         return card;
     }
 
+    /* Какая вкладка открыта. Держим между героями: смотришь таланты у
+       одного — у следующего открываются они же. */
+    var tab = "build";
+
+    function itemLine(entry, kind) {
+        var row = el("div", "line");
+
+        row.appendChild(artwork("items", entry.item, "line-art"));
+
+        var body = el("div", "line-body");
+        body.appendChild(el("div", "line-name", entry.display || entry.item));
+
+        if (entry.role) {
+            body.appendChild(el("div", "line-role", entry.role));
+        }
+
+        row.appendChild(body);
+
+        var tail = el("div", "line-tail");
+
+        if (kind === "start") {
+            tail.appendChild(el("span", "line-share",
+                entry.count > 1 ? "x" + entry.count : "x1"));
+            tail.appendChild(el("span", "line-gold",
+                entry.cost * (entry.count || 1)));
+        } else {
+            tail.appendChild(el("span", "line-share",
+                Math.round(entry.share) + "%"));
+            tail.appendChild(el("span", "line-time",
+                entry.median_time
+                    ? Math.round(entry.median_time / 60) + " мин"
+                    : "—"));
+        }
+
+        row.appendChild(tail);
+
+        bindTip(row, (entry.display || entry.item)
+            + (entry.cost ? " &middot; " + entry.cost + " золота" : "")
+            + (entry.winrate ? " &middot; " + entry.winrate + "% побед" : ""));
+
+        return row;
+    }
+
+    function column(title, note, entries, kind, cls) {
+        var card = el("section", "col" + (cls ? " " + cls : ""));
+
+        var head = el("div", "col-head");
+        head.appendChild(el("span", "col-title", title));
+
+        if (note) { head.appendChild(el("span", "col-note", note)); }
+
+        card.appendChild(head);
+
+        var list = el("div", "col-list");
+
+        entries.forEach(function (entry) {
+            list.appendChild(itemLine(entry, kind));
+        });
+
+        card.appendChild(list);
+
+        return card;
+    }
+
+    /* Заголовок фазы без времени ничего не говорит: «ранняя игра» у керри
+       и у саппорта — это разные минуты. */
+    function phaseNote(entries) {
+        var times = entries.map(function (e) { return e.median_time; })
+                           .filter(Boolean);
+
+        if (!times.length) { return null; }
+
+        return Math.round(Math.min.apply(null, times) / 60) + "–"
+            + Math.round(Math.max.apply(null, times) / 60) + " мин";
+    }
+
+    function buildTab(state) {
+        var wrap = el("div");
+        var box = el("div", "cols");
+
+        var purchase = state.starting_purchase || {};
+
+        if ((purchase.items || []).length) {
+            box.appendChild(column("Стартовая закупка",
+                purchase.total + " / " + purchase.budget + " зол.",
+                purchase.items, "start"));
+        }
+
+        [["early", "Ранняя игра"], ["core", "Основной закуп"],
+         ["late", "Поздняя игра"]].forEach(function (pair) {
+            var entries = state[pair[0]] || [];
+
+            if (!entries.length) { return; }
+
+            box.appendChild(column(pair[1], phaseNote(entries), entries));
+        });
+
+        wrap.appendChild(box);
+
+        var extra = el("div", "cols two");
+
+        if ((state.consumables || []).length) {
+            extra.appendChild(column("Расходники и варды", null,
+                state.consumables));
+        }
+
+        if ((state.situational || []).length) {
+            var card = el("section", "col");
+
+            var head = el("div", "col-head");
+            head.appendChild(el("span", "col-title", "Ситуативно"));
+            head.appendChild(el("span", "col-note", "зачем и против кого"));
+            card.appendChild(head);
+
+            var list = el("div", "col-list");
+
+            state.situational.forEach(function (entry) {
+                var row = el("div", "line");
+
+                row.appendChild(artwork("items", entry.item, "line-art"));
+
+                var body = el("div", "line-body");
+                body.appendChild(el("div", "line-name", entry.display));
+
+                if (entry.role) {
+                    body.appendChild(el("div", "line-role", entry.role));
+                }
+
+                var blame = (entry.because || []).map(function (who) {
+                    return who.display;
+                });
+
+                if (blame.length) {
+                    body.appendChild(el("div", "line-why",
+                        "против " + blame.join(", ")));
+                }
+
+                row.appendChild(body);
+                list.appendChild(row);
+            });
+
+            card.appendChild(list);
+            extra.appendChild(card);
+        }
+
+        if (extra.children.length) { wrap.appendChild(extra); }
+
+        return wrap;
+    }
+
+    function skillsTab(state) {
+        var box = el("div", "cols two");
+
+        if ((state.skills || []).length) {
+            var card = el("section", "col");
+
+            var head = el("div", "col-head");
+            head.appendChild(el("span", "col-title", "Порядок прокачки"));
+            head.appendChild(el("span", "col-note", "с первого уровня"));
+            card.appendChild(head);
+
+            var skills = el("div", "skills");
+
+            state.skills.forEach(function (entry, index) {
+                var cell = el("div", "skill"
+                    + (entry.mark === "ульт" ? " ult" : ""));
+                cell.appendChild(artwork("abilities", entry.icon, ""));
+                cell.appendChild(el("span", "key", entry.mark || "·"));
+                bindTip(cell, (index + 1) + "-м уровнем &middot; "
+                    + (entry.display || entry.ability));
+                skills.appendChild(cell);
+            });
+
+            card.appendChild(skills);
+            box.appendChild(card);
+        }
+
+        if ((state.talents || []).length) {
+            var tcard = el("section", "col");
+
+            var thead = el("div", "col-head");
+            thead.appendChild(el("span", "col-title", "Таланты"));
+            thead.appendChild(el("span", "col-note", "сторона в дереве"));
+            tcard.appendChild(thead);
+
+            var talents = el("div", "talents");
+
+            state.talents.forEach(function (entry) {
+                var line = el("div", "talent" + (entry.stale ? " stale" : ""));
+                line.appendChild(el("span", "lvl", entry.level));
+                line.appendChild(el("span", "side" + (entry.side ? "" : " none"),
+                    entry.side || "—"));
+
+                var what = el("span", "what", entry.display || entry.talent);
+
+                if (entry.stale) {
+                    what.appendChild(el("span", "stale-note", " старый патч"));
+                }
+
+                line.appendChild(what);
+                line.appendChild(el("span", "tshare",
+                    entry.share ? Math.round(entry.share) + "%" : ""));
+
+                talents.appendChild(line);
+            });
+
+            tcard.appendChild(talents);
+            box.appendChild(tcard);
+        }
+
+        return box;
+    }
+
+    var TABS = [
+        ["build", "Сборка"],
+        ["skills", "Прокачка и таланты"]
+    ];
+
     function draw(state) {
         if (state.error) {
             show(el("div", "empty", state.error));
@@ -343,107 +510,50 @@
 
         var page = el("div", "guide-page");
 
-        var head = el("div", "guide-head");
-        head.appendChild(artwork("heroes", state.hero, "guide-art"));
+        /* Шапка героя: портрет, имя, цифры и позиции в одной строке. */
+        var head = el("div", "hero-head");
 
-        var titles = el("div");
-        // Технического имени («nevermore») игрок не знает — движок
-        // присылает человеческое рядом.
-        titles.appendChild(el("div", "guide-name",
+        head.appendChild(artwork("heroes", state.hero, "hero-face"));
+
+        var titles = el("div", "hero-titles");
+        titles.appendChild(el("div", "hero-name",
             state.hero_display || state.hero));
 
-        var facts = el("div", "guide-facts");
+        var facts = el("div", "hero-facts");
+
         var wr = el("span");
         wr.innerHTML = "<b>" + state.winrate + "%</b> побед";
         facts.appendChild(wr);
-        facts.appendChild(el("span", "dot", "·"));
-        facts.appendChild(el("span", null, state.matches + " игр"));
-        titles.appendChild(facts);
 
+        facts.appendChild(el("span", "dot", "·"));
+        facts.appendChild(el("span", null, count(state.matches) + " игр"));
+
+        titles.appendChild(facts);
         head.appendChild(titles);
         head.appendChild(positions(state));
+
         page.appendChild(head);
 
-        var purchase = state.starting_purchase || {};
+        /* Вкладок две: сборка и прокачка. Больше показывать пока нечего,
+           а пустая вкладка хуже её отсутствия. */
+        var tabs = el("nav", "tabs");
 
-        if ((purchase.items || []).length) {
-            page.appendChild(block(
-                "стартовая закупка",
-                purchase.total + " / " + purchase.budget + " золота",
-                table(purchase.items, [
-                    ["штук", function (e) { return e.count > 1 ? "×" + e.count : "1"; }],
-                    ["золота", function (e) { return e.cost * (e.count || 1); }, "gold"]
-                ])
-            ));
-        }
+        TABS.forEach(function (pair) {
+            var button = el("button", "tab" + (tab === pair[0] ? " on" : ""),
+                pair[1]);
+            button.type = "button";
 
-        [["early", "ранняя игра"], ["core", "основной закуп"], ["late", "поздняя игра"]]
-            .forEach(function (pair) {
-                var entries = state[pair[0]] || [];
-
-                if (!entries.length) { return; }
-
-                // Заголовок фазы без времени ничего не говорит: «ранняя
-                // игра» у кэрри и у саппорта — разные минуты.
-                var times = entries.map(function (e) { return e.median_time; })
-                                   .filter(Boolean);
-
-                var when = times.length
-                    ? Math.round(Math.min.apply(null, times) / 60) + "–"
-                      + Math.round(Math.max.apply(null, times) / 60) + " мин"
-                    : null;
-
-                page.appendChild(block(pair[1], when,
-                    table(entries, [
-                        ["% игр", function (e) { return e.share + "%"; }, "part"],
-                        ["берут к", function (e) {
-                            return e.median_time ? minutes(e.median_time) : "—";
-                        }, "clock"],
-                        ["золота", function (e) { return e.cost || "—"; }, "gold"]
-                    ])
-                ));
+            button.addEventListener("click", function () {
+                tab = pair[0];
+                draw(state);
             });
 
-        if ((state.consumables || []).length) {
-            page.appendChild(block("расходники и варды", null,
-                table(state.consumables, [
-                    ["% игр", function (e) { return e.share + "%"; }, "part"],
-                    ["берут к", function (e) {
-                        return e.median_time ? minutes(e.median_time) : "—";
-                    }, "clock"]
-                ])
-            ));
-        }
+            tabs.appendChild(button);
+        });
 
-        if ((state.skills || []).length) {
-            var skills = el("div", "skills");
+        page.appendChild(tabs);
 
-            state.skills.forEach(function (entry, index) {
-                var cell = el("div", "skill" + (entry.mark === "ульт" ? " ult" : ""));
-                cell.appendChild(artwork("abilities", entry.icon, ""));
-                cell.appendChild(el("span", "key", entry.mark || "·"));
-                bindTip(cell, (index + 1) + "-м уровнем &middot; "
-                    + (entry.display || entry.ability));
-                skills.appendChild(cell);
-            });
-
-            page.appendChild(block("порядок прокачки", null, skills));
-        }
-
-        if ((state.talents || []).length) {
-            var talents = el("div", "talents");
-
-            state.talents.forEach(function (entry) {
-                var line = el("div", "talent" + (entry.stale ? " stale" : ""));
-                line.appendChild(el("span", "lvl", entry.level));
-                line.appendChild(el("span", "side" + (entry.side ? "" : " none"),
-                    entry.side || "—"));
-                line.appendChild(el("span", "what", entry.display || entry.talent));
-                talents.appendChild(line);
-            });
-
-            page.appendChild(block("таланты", null, talents));
-        }
+        page.appendChild(tab === "skills" ? skillsTab(state) : buildTab(state));
 
         show(page);
     }

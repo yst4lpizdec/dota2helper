@@ -2,13 +2,12 @@
 
 Данные стареют быстрее программы. Матчи собираются каждую неделю, а
 интерфейс может не меняться месяцами — гонять человека через установщик
-на 250 мегабайт ради полутора мегабайт цифр незачем. Поэтому snapshot
-обновляется сам и на месте, без перезапуска: скачали, подменили, движок
-перечитал.
+на четверть гигабайта ради полутора мегабайт цифр незачем. Поэтому
+snapshot обновляется отдельно и на месте: согласился — скачали,
+подменили, движок перечитал, без перезапуска.
 
-Сама программа обновляется установщиком, и только с согласия: он закроет
-приложение и попросит подтверждения у Windows. Делать это за спиной
-игрока, посреди матча, нельзя.
+Ничего не качается само. Программа только проверяет и предлагает:
+качать в фоне чужой трафик, тем более посреди матча, — не наше дело.
 """
 
 import json
@@ -31,9 +30,15 @@ REPO = "yst4lpizdec/dota2helper"
 
 RELEASES_API = f"https://api.github.com/repos/{REPO}/releases"
 
-# Релиз, в котором лежат только данные. Он переиздаётся при каждом
-# пересчёте, и программа смотрит именно на него, не трогая версии.
-DATA_TAG = "snapshot-latest"
+# Данные живут прямо в репозитории, а не отдельным релизом: релизы —
+# это версии программы, и мешать в них файл с цифрами незачем.
+SNAPSHOT_IN_REPO = "backend/data/snapshot.json.gz"
+
+SNAPSHOT_RAW = (
+    f"https://raw.githubusercontent.com/{REPO}/main/{SNAPSHOT_IN_REPO}"
+)
+
+COMMITS_API = f"https://api.github.com/repos/{REPO}/commits"
 
 SNAPSHOT_NAME = "snapshot.json.gz"
 
@@ -112,24 +117,26 @@ def check(force=False):
 
     result = {"checked_at": now}
 
-    # Данные.
+    # Данные: смотрим, когда файл в репозитории последний раз менялся.
+    # Это один запрос и никакой закачки — сам файл тянем, только если
+    # игрок согласится.
     try:
-        release = _get(f"{RELEASES_API}/tags/{DATA_TAG}")
+        commits = _get(
+            f"{COMMITS_API}?path={SNAPSHOT_IN_REPO}&per_page=1"
+        )
 
-        for asset in release.get("assets") or []:
-            if asset.get("name") == SNAPSHOT_NAME:
-                published = asset.get("updated_at") or ""
+        changed = (
+            (commits or [{}])[0].get("commit", {}).get("committer", {}).get("date")
+        )
 
-                result["data"] = {
-                    "url": asset.get("url"),
-                    "size": asset.get("size"),
-                    "published": published,
-                    "newer": _asset_is_newer(asset),
-                }
+        if changed:
+            result["data"] = {
+                "url": SNAPSHOT_RAW,
+                "published": changed,
+                "newer": _is_newer(changed),
+            }
 
-                break
-
-    except (urllib.error.URLError, OSError, ValueError, KeyError):
+    except (urllib.error.URLError, OSError, ValueError, KeyError, IndexError):
         pass
 
     # Программа.
@@ -174,22 +181,17 @@ def check(force=False):
     return result
 
 
-def _asset_is_newer(asset):
+def _is_newer(published):
     """Свежее ли то, что лежит на GitHub, того, что у нас на диске.
 
-    Сравниваем по времени, а не по размеру: размер после пересчёта может
-    совпасть до байта, а данные внутри будут другие.
+    Сравниваем по времени, а не по размеру: после пересчёта размер может
+    совпасть до байта, а цифры внутри будут другие.
     """
-
-    published = asset.get("updated_at") or asset.get("created_at")
-
-    if not published:
-        return False
 
     try:
         stamp = time.strptime(published, "%Y-%m-%dT%H:%M:%SZ")
 
-    except ValueError:
+    except (ValueError, TypeError):
         return False
 
     return int(time.mktime(stamp)) - time.timezone > local_snapshot_time()
