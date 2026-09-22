@@ -11,9 +11,13 @@
 
 <div class="home">
     <!-- Шапка: слева слова, справа портрет героя. -->
-    <header class="hero-banner">
-        <div class="hero-art" id="hero-art"></div>
+    <!-- Картинка лежит за всей страницей, а не полоской сверху: у
+         референса именно она держит настроение, а карточки плавают
+         поверх неё. Полоса читалась как вклеенный баннер, под которым
+         начинается пустота. -->
+    <div class="page-art" id="hero-art"></div>
 
+    <header class="hero-banner">
         <div class="hero-text">
             <h1>Добро пожаловать в Dota2Helper</h1>
             <p>Подсказка по сборке прямо в игре: что брать следующим,
@@ -43,7 +47,13 @@
          было бы негде. -->
     <section class="live" id="live" hidden></section>
 
-    <section class="about" id="about-card"></section>
+    <!-- Нижняя половина окна раньше была пустой. Заполняем её не
+         кнопками (они дублировали бы меню слева), а содержанием: что
+         сейчас в мете и на чём стоят цифры. -->
+    <div class="two-up">
+        <section class="peek" id="peek"></section>
+        <section class="about" id="about-card"></section>
+    </div>
 
     <footer class="status" id="state"></footer>
 </div>

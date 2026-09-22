@@ -507,6 +507,55 @@
     watchMatch();
     setInterval(watchMatch, 3000);
 
+    /* ---------------- что сейчас в мете ---------------- */
+
+    /* Короткая выжимка: пятёрка самых играемых на керри. Это не навигация,
+       а содержание — окно перестаёт быть пустым полем с кнопками. */
+    function drawPeek() {
+        var peek = document.getElementById("peek");
+
+        if (!peek) { return; }
+
+        fetch("/api/meta", { cache: "no-store" })
+            .then(function (answer) { return answer.json(); })
+            .then(function (data) {
+                var rows = (data.rows || []).filter(function (row) {
+                    return row.position === "POSITION_1";
+                }).slice(0, 6);
+
+                if (!rows.length) { return; }
+
+                var list = rows.map(function (row) {
+                    return '<div class="peek-row">'
+                        + '<img src="/icons/heroes/' + row.hero + '.png" alt="">'
+                        + '<span class="peek-name">' + row.display + "</span>"
+                        + '<span class="peek-bar"><i style="width:'
+                        + Math.round(row.share / rows[0].share * 100)
+                        + '%"></i></span>'
+                        + '<span class="peek-share">' + row.share + "%</span>"
+                        + '<span class="peek-wr'
+                        + (row.winrate >= 50 ? " up" : "") + '">'
+                        + row.winrate + "%</span>"
+                        + "</div>";
+                }).join("");
+
+                peek.innerHTML =
+                    '<div class="peek-head"><span>Сейчас на керри</span>'
+                    + '<button class="peek-more" type="button">вся мета</button>'
+                    + "</div>" + list;
+
+                peek.querySelector(".peek-more")
+                    .addEventListener("click", function () {
+                        if (window.parent && window.parent.__open) {
+                            window.parent.__open("meta");
+                        }
+                    });
+            })
+            .catch(function (error) { console.error(error); });
+    }
+
+    drawPeek();
+
     var banner = new Image();
 
     banner.onload = function () {

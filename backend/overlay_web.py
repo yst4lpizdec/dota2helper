@@ -46,7 +46,7 @@ MENU_URL = "http://localhost:3000/menu"
 
 # Размер главного окна. Подобран под содержимое: слева разделы, справа
 # справочник с четырьмя колонками сборки — им нужно около тысячи точек.
-MENU_SIZE = (1180, 720)
+MENU_SIZE = (1180, 660)
 
 ICON_PATH = Path(__file__).resolve().parent / "data" / "icons" / "app" / "app.ico"
 

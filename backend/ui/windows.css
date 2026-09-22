@@ -52,7 +52,9 @@ body.browse {
 
 .roster {
     flex: none;
-    width: 250px;
+    /* Уже, чем было: окно теперь одно на всё приложение, и место нужнее
+       колонкам сборки, чем списку имён. */
+    width: 204px;
     overflow-y: auto;
     padding: 8px;
     border-right: 1px solid var(--line);
@@ -1146,3 +1148,206 @@ body.own-art .hero-art::after {
     color: var(--time);
     font-variant-numeric: tabular-nums;
 }
+
+/* ------------------------------------------------------------------ */
+/* стекло: карточки поверх картинки                                     */
+/* ------------------------------------------------------------------ */
+
+/* Картинка на всю страницу и тёмная вуаль поверх неё. Дальше карточки
+   идут полупрозрачными с размытием — так между ними и фоном появляется
+   глубина, которой не было у плоских блоков на чёрном. */
+.page-art {
+    position: fixed;
+    inset: 0;
+    background-size: cover;
+    background-position: center 24%;
+    z-index: 0;
+}
+
+.page-art::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(
+            180deg,
+            rgba(8, 11, 16, 0.2) 0%,
+            rgba(8, 11, 16, 0.55) 55%,
+            rgba(8, 11, 16, 0.68) 100%
+        ),
+        linear-gradient(
+            90deg,
+            rgba(8, 11, 16, 0.82) 0%,
+            rgba(8, 11, 16, 0.3) 52%,
+            rgba(8, 11, 16, 0.22) 100%
+        );
+}
+
+body.home-page .home { position: relative; z-index: 1; }
+
+/* Шапка больше не носит картинку — она просто текст поверх общего фона. */
+body.home-page .hero-banner {
+    margin: 0;
+    padding: 30px 0 26px;
+    min-height: 0;
+    border-bottom: 0;
+    background: none;
+    overflow: visible;
+}
+
+.hero-text { padding: 0; max-width: 460px; }
+
+.hero-text h1 { font-size: 25px; }
+
+.hero-text p { margin: 8px 0 20px; font-size: 13px; }
+
+/* Стеклянные карточки: полупрозрачный фон, размытие и светлая грань
+   сверху — она даёт край, за который цепляется глаз. */
+.about,
+.live,
+.setup,
+.upd,
+.col {
+    background: rgba(20, 25, 34, 0.62);
+    backdrop-filter: blur(14px) saturate(1.2);
+    border: 1px solid rgba(255, 255, 255, 0.075);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 14px 34px -18px rgba(0, 0, 0, 0.9);
+    border-radius: 12px;
+}
+
+.live { border-color: rgba(76, 157, 255, 0.28); }
+
+.upd { border-color: rgba(76, 157, 255, 0.3); }
+
+.setup { border-color: rgba(240, 180, 41, 0.34); }
+
+.setup.fine { border-color: rgba(255, 255, 255, 0.075); }
+
+/* Строка состояния внизу главной: без рамки, на общем фоне. */
+body.home-page .status {
+    position: relative;
+    z-index: 1;
+    border-top-color: rgba(255, 255, 255, 0.07);
+}
+
+/* ------------------------------------------------------------------ */
+/* боковое меню: объём вместо плоского списка                           */
+/* ------------------------------------------------------------------ */
+
+.side {
+    background: linear-gradient(180deg, #0a0d13 0%, #080a0f 100%);
+    border-right-color: rgba(255, 255, 255, 0.06);
+}
+
+.side-brand { padding-bottom: 20px; font-size: 14px; }
+
+.side-logo { width: 22px; height: 22px; }
+
+.side-nav { gap: 3px; }
+
+/* Значок в своём квадрате: у референса именно это отличает меню от
+   списка ссылок. */
+.side-item {
+    gap: 11px;
+    padding: 8px 9px;
+    font-size: 13px;
+}
+
+.side-item svg {
+    width: 16px;
+    height: 16px;
+    padding: 6px;
+    box-sizing: content-box;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.05);
+    transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.side-item:hover svg { background: rgba(255, 255, 255, 0.09); }
+
+.side-item.on {
+    background: rgba(76, 157, 255, 0.14);
+    color: #dbe9ff;
+    font-weight: 600;
+}
+
+.side-item.on svg {
+    background: var(--accent);
+    color: #08111e;
+}
+
+/* ------------------------------------------------------------------ */
+/* нижняя половина главной                                              */
+/* ------------------------------------------------------------------ */
+
+.two-up {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: start;
+}
+
+.peek {
+    padding: 14px 16px 12px;
+    background: rgba(20, 25, 34, 0.62);
+    backdrop-filter: blur(14px) saturate(1.2);
+    border: 1px solid rgba(255, 255, 255, 0.075);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 14px 34px -18px rgba(0, 0, 0, 0.9);
+    border-radius: 12px;
+}
+
+.peek-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.peek-head span { font-size: 12px; font-weight: 650; }
+
+.peek-more {
+    border: 0;
+    padding: 0;
+    background: none;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--accent);
+    cursor: pointer;
+}
+
+.peek-more:hover { text-decoration: underline; }
+
+.peek-row {
+    display: grid;
+    grid-template-columns: 30px 1fr 64px 42px 42px;
+    align-items: center;
+    gap: 9px;
+    padding: 3px 0;
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+}
+
+.peek-row img { width: 30px; border-radius: 4px; background: var(--slot-bg); }
+
+.peek-name { font-weight: 600; }
+
+.peek-bar {
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.07);
+    overflow: hidden;
+}
+
+.peek-bar i { display: block; height: 100%; background: var(--accent); }
+
+.peek-share { color: var(--muted); text-align: right; }
+.peek-wr { color: var(--muted); text-align: right; }
+.peek-wr.up { color: var(--good); }
+
+/* Карточка «о приложении» стоит рядом — её сетка была рассчитана на всю
+   ширину окна. */
+.two-up .about-grid { grid-template-columns: 1fr; gap: 7px; }
