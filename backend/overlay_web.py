@@ -206,10 +206,30 @@ class Page(QWidget):
             # Растягивать окно всё равно нельзя, поэтому ни рамки для
             # изменения размера, ни системных кнопок не нужно.
             self.setWindowFlags(
-                Qt.Window | Qt.FramelessWindowHint | Qt.MSWindowsFixedSizeDialogHint
+                Qt.Window
+                | Qt.FramelessWindowHint
+                | Qt.MSWindowsFixedSizeDialogHint
             )
 
             self.round_corners()
+
+        # Значок приложения задан на всё приложение сразу, но окну его
+        # лучше поставить и отдельно: так он точно доживает до панели
+        # задач, в какой бы момент окно ни открыли.
+        if ICON_PATH.exists():
+            self.setWindowIcon(QIcon(str(ICON_PATH)))
+
+        self.view = QWebEngineView(self)
+        self.view.setContextMenuPolicy(Qt.NoContextMenu)
+
+        if channel is not None:
+            self.view.page().setWebChannel(channel)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.view)
+
+        self.view.load(QUrl(url))
 
     def round_corners(self):
         """Просит Windows скруглить углы окна.
@@ -235,24 +255,6 @@ class Page(QWidget):
 
         except (OSError, AttributeError):
             pass
-
-        # Значок приложения задан на всё приложение сразу, но окну его
-        # лучше поставить и отдельно: так он точно доживает до панели
-        # задач, в какой бы момент окно ни открыли.
-        if ICON_PATH.exists():
-            self.setWindowIcon(QIcon(str(ICON_PATH)))
-
-        self.view = QWebEngineView(self)
-        self.view.setContextMenuPolicy(Qt.NoContextMenu)
-
-        if channel is not None:
-            self.view.page().setWebChannel(channel)
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self.view)
-
-        self.view.load(QUrl(url))
 
     def reopen(self):
         """Показывает окно, поднимая уже открытое вместо второго такого."""
