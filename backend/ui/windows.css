@@ -1696,11 +1696,12 @@ body.browse .hero-head {
     padding: 0 0 18px;
 }
 
+/* Портрет в родной форме иконки, 16:9. В квадрате лицо оставалось
+   только у тех, кто стоит в центре кадра: у Lina — одни волосы. */
 body.browse .hero-face {
-    width: 84px;
-    height: 84px;
+    width: 128px;
+    height: 72px;
     object-fit: cover;
-    object-position: center 20%;
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.9);

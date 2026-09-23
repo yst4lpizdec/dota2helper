@@ -46,15 +46,15 @@ body.preview .stage { margin: 0 auto; }
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* Портрет квадратом, как в справочнике: полоска 64×36 читалась как
-   значок, а не как лицо героя. */
+/* Портрет в родной форме иконки, 16:9, но крупнее прежней полоски
+   64×36. Квадратом нельзя: лицо сбоку кадра обрезалось (у Lina
+   оставались одни волосы). */
 .portrait {
-    width: 50px;
-    height: 50px;
+    width: 80px;
+    height: 45px;
     object-fit: cover;
-    object-position: center 20%;
     display: block;
-    border-radius: 11px;
+    border-radius: 10px;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -183,7 +183,7 @@ body.compact #fold svg { transform: rotate(180deg); }
 body.compact #home,
 body.compact #browse { display: none; }
 
-body.compact .portrait { width: 40px; height: 40px; border-radius: 9px; }
+body.compact .portrait { width: 64px; height: 36px; border-radius: 8px; }
 body.compact .hero-name { font-size: 16px; }
 
 body.compact .now-head {
