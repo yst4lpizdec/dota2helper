@@ -20,6 +20,8 @@ from engine import Engine
 from gsi.tracker import MatchTracker
 from services.fonts import font_files
 from config import USER_DIR
+from services import dota_builds
+from services.dota import is_running as dota_running
 from services import setup as setup_check
 from services import settings as settings_store
 from services import updates
@@ -115,6 +117,17 @@ class Helper:
             f"патч {snapshot['patch']}, {snapshot['matches']} матчей, "
             f"{len(snapshot['guides'])} гайдов"
         )
+
+        # Новая версия программы приходит со свежим snapshot — сборки в
+        # магазине Доты, если игрок их ставил, догоняем по нему же.
+        threading.Thread(target=self.refresh_builds, daemon=True).start()
+
+    def refresh_builds(self):
+        try:
+            dota_builds.refresh(self.engine)
+
+        except OSError as error:
+            print(f"сборки в Доте не обновились: {error}")
 
     def _compute(self, info, lane, position):
         """Считает рекомендацию. Вызывается ВНЕ блокировки: пока идёт счёт,
@@ -344,6 +357,8 @@ class Helper:
             self.result = None
             self.last_key = None
 
+        self.refresh_builds()
+
         print(
             f"данные обновлены: патч {report['patch']}, "
             f"{report['matches']} матчей, {report['guides']} гайдов"
@@ -407,14 +422,47 @@ class Helper:
     def setup(self):
         """Готова ли Дота отдавать данные — и если нет, то чего не хватает."""
 
-        return setup_check.report(
-            port=PORT, heard_game=self.tracker.updated_at > 0
-        )
+        return {
+            **setup_check.report(
+                port=PORT, heard_game=self.tracker.updated_at > 0
+            ),
+            "builds": {
+                **dota_builds.state(),
+                **dota_builds.selection_state(list(self.engine.hero_by_name)),
+                "dota_running": dota_running(),
+            },
+        }
 
     def install_setup(self):
         written = setup_check.install_config(port=PORT)
 
         return {"written": written, **self.setup()}
+
+    def install_builds(self):
+        """Наши сборки — в «Стандартные предметы» магазина Доты."""
+
+        try:
+            dota_builds.install(self.engine)
+
+            # У кого из героев в игре выбрано руководство из Мастерской,
+            # тот нашу сборку не увидит — переключаем всех на неё. Только
+            # по кнопке: при обновлении данных чужой выбор не трогаем.
+            dota_builds.select_ours(list(self.engine.hero_by_name))
+
+        except (OSError, ValueError) as error:
+            return {"error": str(error), **self.setup()}
+
+        return self.setup()
+
+    def restore_builds(self):
+        try:
+            dota_builds.restore()
+            dota_builds.restore_selection()
+
+        except OSError as error:
+            return {"error": str(error), **self.setup()}
+
+        return self.setup()
 
     def current(self):
         with self.lock:
@@ -480,6 +528,17 @@ class Handler(BaseHTTPRequestHandler):
 
         if self.path.startswith("/update-app"):
             self.answer(HELPER.update_app())
+
+            return
+
+        # Сборки в папке игры — тоже только по кнопке, как и конфиг.
+        if self.path.startswith("/install-builds"):
+            self.answer(HELPER.install_builds())
+
+            return
+
+        if self.path.startswith("/restore-builds"):
+            self.answer(HELPER.restore_builds())
 
             return
 

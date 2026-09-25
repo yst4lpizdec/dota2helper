@@ -2222,3 +2222,13 @@ label.set-row { cursor: pointer; }
 }
 
 .conn-row .btn { flex: none; }
+
+/* Строка про сборки в Доте — длиннее остальных и с двумя кнопками. */
+.conn-row.wide { grid-column: 1 / -1; }
+
+.conn-row.off .conn-dot {
+    background: var(--faint);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+}
+
+.conn-buttons { display: flex; gap: 8px; flex: none; }

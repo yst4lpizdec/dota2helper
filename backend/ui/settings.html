@@ -344,6 +344,70 @@
             now.heard_game
                 ? "игра присылала данные — всё работает"
                 : "пока не приходили: запусти Доту, и строка загорится сама"));
+
+        connRows.appendChild(buildsRow(now.builds || {}));
+    }
+
+    /* Наши сборки в «Стандартных предметах» магазина Доты. Это не
+       обязательная настройка, поэтому без красной точки, пока не стоят. */
+    function buildsRow(builds) {
+        function ask(path, button, busy) {
+            button.disabled = true;
+            button.textContent = busy;
+
+            fetch(path, { method: "POST", body: "{}" })
+                .then(function (answer) { return answer.json(); })
+                .then(drawConn)
+                .catch(function (error) {
+                    console.error(error);
+                    button.disabled = false;
+                    button.textContent = "не вышло, ещё раз";
+                });
+        }
+
+        var buttons = el("span", "conn-buttons");
+
+        var put = el("button", "btn small", builds.installed ? "Обновить" : "Поставить наши");
+        put.type = "button";
+        put.addEventListener("click", function () { ask("/install-builds", put, "кладу…"); });
+        buttons.appendChild(put);
+
+        if (builds.installed) {
+            var back = el("button", "btn small", builds.backup ? "Вернуть прежние" : "Убрать наши");
+            back.type = "button";
+            back.addEventListener("click", function () { ask("/restore-builds", back, "возвращаю…"); });
+            buttons.appendChild(back);
+        }
+
+        var note;
+
+        if (!builds.installed) {
+            note = "заменить «Стандартные предметы» в магазине Доты нашей сборкой на каждого героя:"
+                + " старт, ранняя игра, кор, поздняя игра — по самой частой роли героя."
+                + " Она же станет выбранной у всех героев";
+        } else {
+            note = "стоят на " + builds.count + " героев: старт, ранняя игра, кор, поздняя игра."
+                + " Ситуативное против пика, прокачка и таланты — на панели.";
+
+            var other = builds.known ? builds.count - builds.ours : 0;
+
+            if (other > 0) {
+                note += builds.dota_running
+                    ? " У " + other + " героев в игре выбрано другое руководство —"
+                        + " закрой Доту и нажми «Обновить», тогда выберем наше у всех"
+                    : " У " + other + " героев в игре выбрано другое руководство —"
+                        + " нажми «Обновить», чтобы выбрать наше у всех";
+            } else {
+                note += " Выбраны у всех героев. Если Дота запущена, появятся после её перезапуска";
+            }
+        }
+
+        var row = connRow(!!builds.installed, "Сборки в магазине Доты", note, buttons);
+        row.classList.add("wide");
+
+        if (!builds.installed) { row.classList.add("off"); }
+
+        return row;
     }
 
     function checkConn() {
