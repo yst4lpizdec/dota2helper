@@ -10,7 +10,7 @@ import concurrent.futures
 import requests
 
 from config import DATA_DIR
-from database.database import get_connection
+from services.snapshot import load_snapshot
 
 
 CDN = "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react"
@@ -44,42 +44,42 @@ def _download(url, path):
 
 
 def download_all(workers=12):
-    """Тянет иконки всех предметов и героев из нашей базы."""
+    """Тянет иконки всех предметов, героев и способностей.
+
+    Список берём из snapshot, а не из базы матчей: база живёт только там,
+    где собираются данные, а иконки нужны и при сборке установщика на
+    машине GitHub, где есть один snapshot из репозитория.
+    """
 
     ITEMS_DIR.mkdir(parents=True, exist_ok=True)
     HEROES_DIR.mkdir(parents=True, exist_ok=True)
     CROPS_DIR.mkdir(parents=True, exist_ok=True)
     ABILITIES_DIR.mkdir(parents=True, exist_ok=True)
 
-    connection = get_connection()
+    snapshot = load_snapshot()
 
     items = [
-        row["name"].replace("item_", "")
-        for row in connection.execute("SELECT name FROM items")
-        if row["name"]
+        value["name"].replace("item_", "")
+        for value in snapshot["items"].values()
+        if value.get("name")
     ]
 
     heroes = [
-        row["name"].replace("npc_dota_hero_", "")
-        for row in connection.execute("SELECT name FROM heroes")
-        if row["name"]
+        value["name"].replace("npc_dota_hero_", "")
+        for value in snapshot["heroes"].values()
+        if value.get("name")
     ]
 
-    # Только способности из раскладки героев: в таблице лежат ещё
-    # таланты и служебные записи, картинок для них нет.
-    abilities = [
-        row["name"]
-        for row in connection.execute(
-            """
-            SELECT DISTINCT a.name
-            FROM hero_abilities ha JOIN abilities a ON a.id = ha.ability_id
-            WHERE a.is_talent = 0 AND a.name NOT LIKE 'generic%'
-            """
-        )
-        if row["name"]
-    ]
-
-    connection.close()
+    # Только способности из раскладки героев: таланты и служебные
+    # generic_hidden картинок не имеют.
+    abilities = sorted(
+        {
+            name
+            for layout in snapshot["layout"].values()
+            for name in layout["abilities"]
+            if not name.startswith("generic")
+        }
+    )
 
     jobs = [
         (f"{CDN}/items/{name}.png", ITEMS_DIR / f"{name}.png") for name in items
