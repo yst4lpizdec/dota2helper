@@ -15,6 +15,11 @@ on:
       - "v*"
   workflow_dispatch:
 
+# Создать релиз и положить в него установщик. По умолчанию токен сборки
+# только читает репозиторий, и последний шаг падал с 403.
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
