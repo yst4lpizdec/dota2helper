@@ -13,6 +13,12 @@ __pycache__/
 backend/data/*
 !backend/data/snapshot.json.gz
 
+# Значок самой программы — свой, скачать его неоткуда, а без него не
+# собираются ни программа, ни установщик.
+!backend/data/icons/
+backend/data/icons/*
+!backend/data/icons/app/
+
 # Сборка
 build/
 dist/
